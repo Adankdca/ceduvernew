@@ -1,0 +1,558 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site1.master.cs" Inherits="Ceduver.Site1" %>
+
+<!DOCTYPE html>
+
+<html>
+<head runat="server">
+<%--<base href="../../"/>--%>
+		<meta charset="utf-8" />
+		<title>CEDULA | VERIFICACIÓN</title>
+		<meta name="description" content="Secretaria de Infraestructura" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+		<script src="assets/vendor/general/jquery/dist/jquery.js"></script>
+		<!-- Google Fonts - Poppins -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+		<link href="assets/css/pages/wizard/wizard-4.css" rel="stylesheet" />
+		<!-- Datatable -->
+		<link href="assets/plugins/custom/datatables/datatables.bundle.css" rel="stylesheet" type="text/css" />
+		<link href="assets/plugins/custom/datatables/buttons.dataTables.min.css" rel="stylesheet" />
+		<script src="assets/plugins/custom/datatables/jquery.dataTables.min.js"></script>
+		<script src="assets/plugins/custom/datatables/dataTables.buttons.min.js"></script>
+		<script src="assets/plugins/custom/datatables/buttons.html5.min.js"></script>
+		<script src="assets/plugins/custom/datatables/jszip.min.js"></script>
+		<link href="assets/plugins/custom/uppy/uppy.bundle.css" rel="stylesheet" />
+	    <!--begin::Page Vendors Styles(used by this page)-->
+		<%--<link href="assets/plugins/custom/fullcalendar/fullcalendar.bundle.css" rel="stylesheet" type="text/css" />--%>
+		<!--end::Page Vendors Styles-->
+		<!--begin::Global Theme Styles(used by all pages)-->
+		<link href="assets/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css" />
+		<link href="assets/plugins/custom/prismjs/prismjs.bundle.css" rel="stylesheet" type="text/css" />
+		<link href="assets/css/style.bundle.css" rel="stylesheet" type="text/css" />
+		<link href="assets/css/medguard.css" rel="stylesheet" />
+		
+		<!--begin::Layout Themes(used by all pages)-->
+		<link href="assets/css/themes/layout/header/base/light.css" rel="stylesheet" type="text/css" />
+		<link href="assets/css/themes/layout/header/menu/light.css" rel="stylesheet" type="text/css" />
+		<link href="assets/css/themes/layout/brand/dark.css" rel="stylesheet" type="text/css" />
+		<link href="assets/css/themes/layout/aside/dark.css" rel="stylesheet" type="text/css" />
+		<%--<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">--%>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+		
+		<!--end::Layout Themes-->
+		<link rel="shortcut icon" href="assets/media/logos/favicon.ico" />
+		<script>
+            window.Promise = window.Promise || undefined;
+		</script>
+		<style>
+			.header-datetime {
+				  display: flex;
+				  align-items: center;
+				  gap: 16px;
+				  color: var(--muted-foreground);
+				  font-size: 0.85rem;
+				}
+
+				.header-date, .header-time {
+				  display: flex;
+				  align-items: center;
+				  gap: 6px;
+				}
+
+				.header-date svg, .header-time svg {
+				  width: 16px;
+				  height: 16px;
+				}
+		</style>
+    <asp:ContentPlaceHolder ID="head" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+<!--begin::Body-->
+<body id="kt_body" class="header-fixed header-mobile-fixed subheader-enabled subheader-fixed aside-enabled aside-fixed aside-minimize-hoverable page-loading">
+	<!--begin::Main-->
+	<!--begin::Header Mobile-->
+	<div id="kt_header_mobile" class="header-mobile align-items-center header-mobile-fixed">
+		<!--begin::Logo-->
+		<a href="Estimaciones">
+			<img alt="Logo" src="assets/media/logos/logo-light.png" />
+		</a>
+		<!--end::Logo-->
+		<!--begin::Toolbar-->
+		<div class="d-flex align-items-center">
+			<!--begin::Aside Mobile Toggle-->
+			<button class="btn p-0 burger-icon burger-icon-left" id="kt_aside_mobile_toggle">
+				<span></span>
+			</button>
+			<!--end::Aside Mobile Toggle-->
+			<!--begin::Topbar Mobile Toggle-->
+			<button class="btn btn-hover-text-primary p-0 ml-2" id="kt_header_mobile_topbar_toggle">
+				<span class="svg-icon svg-icon-xl">
+					<!--begin::Svg Icon | path:assets/media/svg/icons/General/User.svg-->
+					<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+						<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+							<polygon points="0 0 24 0 24 24 0 24" />
+							<path d="M12,11 C9.790861,11 8,9.209139 8,7 C8,4.790861 9.790861,3 12,3 C14.209139,3 16,4.790861 16,7 C16,9.209139 14.209139,11 12,11 Z" fill="#000000" fill-rule="nonzero" opacity="0.3" />
+							<path d="M3.00065168,20.1992055 C3.38825852,15.4265159 7.26191235,13 11.9833413,13 C16.7712164,13 20.7048837,15.2931929 20.9979143,20.2 C21.0095879,20.3954741 20.9979143,21 20.2466999,21 C16.541124,21 11.0347247,21 3.72750223,21 C3.47671215,21 2.97953825,20.45918 3.00065168,20.1992055 Z" fill="#000000" fill-rule="nonzero" />
+						</g>
+					</svg>
+					<!--end::Svg Icon-->
+				</span>
+			</button>
+			<!--end::Topbar Mobile Toggle-->
+		</div>
+		<!--end::Toolbar-->
+	</div>
+	<!--end::Header Mobile-->
+	<div class="d-flex flex-column flex-root">
+		<!--begin::Page-->
+		<div class="d-flex flex-row flex-column-fluid page">
+			<!--begin::Aside-->
+			<div class="aside aside-left aside-fixed d-flex flex-column flex-row-auto" id="kt_aside">
+				<!--begin::Brand-->
+				<div class="brand flex-column-auto" id="kt_brand">
+					<!--begin::Logo-->
+					<a href="Principal.aspx" class="brand-logo">
+						<img alt="Logo" src="assets/media/logo.png" />
+					</a>
+					<!--end::Logo-->
+					<!--begin::Toggle-->
+					<button class="brand-toggle btn btn-sm px-0" id="kt_aside_toggle">
+						<span class="svg-icon svg-icon svg-icon-xl">
+							<!--begin::Svg Icon | path:assets/media/svg/icons/Navigation/Angle-double-left.svg-->
+							<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+								<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+									<polygon points="0 0 24 0 24 24 0 24" />
+									<path d="M5.29288961,6.70710318 C4.90236532,6.31657888 4.90236532,5.68341391 5.29288961,5.29288961 C5.68341391,4.90236532 6.31657888,4.90236532 6.70710318,5.29288961 L12.7071032,11.2928896 C13.0856821,11.6714686 13.0989277,12.281055 12.7371505,12.675721 L7.23715054,18.675721 C6.86395813,19.08284 6.23139076,19.1103429 5.82427177,18.7371505 C5.41715278,18.3639581 5.38964985,17.7313908 5.76284226,17.3242718 L10.6158586,12.0300721 L5.29288961,6.70710318 Z" fill="#000000" fill-rule="nonzero" transform="translate(8.999997, 11.999999) scale(-1, 1) translate(-8.999997, -11.999999)" />
+									<path d="M10.7071009,15.7071068 C10.3165766,16.0976311 9.68341162,16.0976311 9.29288733,15.7071068 C8.90236304,15.3165825 8.90236304,14.6834175 9.29288733,14.2928932 L15.2928873,8.29289322 C15.6714663,7.91431428 16.2810527,7.90106866 16.6757187,8.26284586 L22.6757187,13.7628459 C23.0828377,14.1360383 23.1103407,14.7686056 22.7371482,15.1757246 C22.3639558,15.5828436 21.7313885,15.6103465 21.3242695,15.2371541 L16.0300699,10.3841378 L10.7071009,15.7071068 Z" fill="#000000" fill-rule="nonzero" opacity="0.3" transform="translate(15.999997, 11.999999) scale(-1, 1) rotate(-270.000000) translate(-15.999997, -11.999999)" />
+								</g>
+							</svg>
+							<!--end::Svg Icon-->
+						</span>
+					</button>
+					<!--end::Toolbar-->
+				</div>
+				<!--end::Brand-->
+				<!--begin::Aside Menu-->
+				<div class="aside-menu-wrapper flex-column-fluid" id="kt_aside_menu_wrapper">
+					<!--begin::Menu Container-->
+					<div id="kt_aside_menu" class="aside-menu my-4" data-menu-vertical="1" data-menu-scroll="1" data-menu-dropdown-timeout="500">
+						<!--begin::Menu Nav-->
+						<ul class="menu-nav">
+							<li class="menu-item" aria-haspopup="true">
+								<a href="Principal.aspx" class="menu-link">
+									<span class="svg-icon menu-icon">
+										<!--begin::Svg Icon | path:assets/media/svg/icons/Design/Layers.svg-->
+										<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+											<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+												<polygon points="0 0 24 0 24 24 0 24" />
+												<path d="M12.9336061,16.072447 L19.36,10.9564761 L19.5181585,10.8312381 C20.1676248,10.3169571 20.2772143,9.3735535 19.7629333,8.72408713 C19.6917232,8.63415859 19.6104327,8.55269514 19.5206557,8.48129411 L12.9336854,3.24257445 C12.3871201,2.80788259 11.6128799,2.80788259 11.0663146,3.24257445 L4.47482784,8.48488609 C3.82645598,9.00054628 3.71887192,9.94418071 4.23453211,10.5925526 C4.30500305,10.6811601 4.38527899,10.7615046 4.47382636,10.8320511 L4.63,10.9564761 L11.0659024,16.0730648 C11.6126744,16.5077525 12.3871218,16.5074963 12.9336061,16.072447 Z" fill="#000000" fill-rule="nonzero" />
+												<path d="M11.0563554,18.6706981 L5.33593024,14.122919 C4.94553994,13.8125559 4.37746707,13.8774308 4.06710397,14.2678211 C4.06471678,14.2708238 4.06234874,14.2738418 4.06,14.2768747 L4.06,14.2768747 C3.75257288,14.6738539 3.82516916,15.244888 4.22214834,15.5523151 C4.22358765,15.5534297 4.2250303,15.55454 4.22647627,15.555646 L11.0872776,20.8031356 C11.6250734,21.2144692 12.371757,21.2145375 12.909628,20.8033023 L19.7677785,15.559828 C20.1693192,15.2528257 20.2459576,14.6784381 19.9389553,14.2768974 C19.9376429,14.2751809 19.9363245,14.2734691 19.935,14.2717619 L19.935,14.2717619 C19.6266937,13.8743807 19.0546209,13.8021712 18.6572397,14.1104775 C18.654352,14.112718 18.6514778,14.1149757 18.6486172,14.1172508 L12.9235044,18.6705218 C12.377022,19.1051477 11.6029199,19.1052208 11.0563554,18.6706981 Z" fill="#000000" opacity="0.3" />
+											</g>
+										</svg>
+										<!--end::Svg Icon-->
+									</span>
+									<span class="menu-text">Principal</span>
+								</a>
+							</li>
+							<li class="menu-section">
+								<h4 class="menu-text">Seguimiento Clínico</h4>
+								<i class="menu-icon ki ki-bold-more-hor icon-md"></i>
+							</li>
+							<li class="menu-item" aria-haspopup="true">
+								<a href="Principal.aspx" class="menu-link">
+								  <span class="svg-icon menu-icon">
+									<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+									  <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"></circle>
+									  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+									</svg>
+								  </span>
+								  <span class="menu-text">Proyecto-Obras</span>
+								  <%--<span class="menu-label">
+									<span class="label label-danger label-inline">24</span>
+								  </span>--%>
+								</a>
+							  </li>
+							  <li class="menu-item" aria-haspopup="true">
+								<a href="Contratos.aspx" class="menu-link">
+									<span class="svg-icon menu-icon">
+										<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+											<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+												<rect x="0" y="0" width="24" height="24" />
+												<path d="M5,3 L6,3 C6.55228475,3 7,3.44771525 7,4 L7,20 C7,20.5522847 6.55228475,21 6,21 L5,21 C4.44771525,21 4,20.5522847 4,20 L4,4 C4,3.44771525 4.44771525,3 5,3 Z M10,3 L11,3 C11.5522847,3 12,3.44771525 12,4 L12,20 C12,20.5522847 11.5522847,21 11,21 L10,21 C9.44771525,21 9,20.5522847 9,20 L9,4 C9,3.44771525 9.44771525,3 10,3 Z" fill="#000000" />
+												<rect fill="#000000" opacity="0.3" transform="translate(17.825568, 11.945519) rotate(-19.000000) translate(-17.825568, -11.945519)" x="16.3255682" y="2.94551858" width="3" height="18" rx="1" />
+											</g>
+										</svg>
+									</span>
+									<span class="menu-text">Contratos</span>
+								</a>
+								</li>	
+							<%--<li class="menu-section">
+									<h4 class="menu-text">Contratos</h4>
+									<i class="menu-icon ki ki-bold-more-hor icon-md"></i>
+							</li>--%>
+							<li class="menu-item" aria-haspopup="true">
+								<a href="CedulaVerificacionSeguimiento.aspx" class="menu-link">
+									<span class="svg-icon menu-icon">
+										
+										<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+											<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+												<rect x="0" y="0" width="24" height="24" />
+												<path d="M5,3 L6,3 C6.55228475,3 7,3.44771525 7,4 L7,20 C7,20.5522847 6.55228475,21 6,21 L5,21 C4.44771525,21 4,20.5522847 4,20 L4,4 C4,3.44771525 4.44771525,3 5,3 Z M10,3 L11,3 C11.5522847,3 12,3.44771525 12,4 L12,20 C12,20.5522847 11.5522847,21 11,21 L10,21 C9.44771525,21 9,20.5522847 9,20 L9,4 C9,3.44771525 9.44771525,3 10,3 Z" fill="#000000" />
+												<rect fill="#000000" opacity="0.3" transform="translate(17.825568, 11.945519) rotate(-19.000000) translate(-17.825568, -11.945519)" x="16.3255682" y="2.94551858" width="3" height="18" rx="1" />
+											</g>
+										</svg>
+										
+									</span>
+									<span class="menu-text">Cédula de Verificación</span>
+								</a>
+							</li>
+							<%--<li class="menu-item" aria-haspopup="true">
+								<a href="#" class="menu-link">
+									<span class="svg-icon menu-icon">
+									
+										<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+											<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+												<rect x="0" y="0" width="24" height="24" />
+												<path d="M5,3 L6,3 C6.55228475,3 7,3.44771525 7,4 L7,20 C7,20.5522847 6.55228475,21 6,21 L5,21 C4.44771525,21 4,20.5522847 4,20 L4,4 C4,3.44771525 4.44771525,3 5,3 Z M10,3 L11,3 C11.5522847,3 12,3.44771525 12,4 L12,20 C12,20.5522847 11.5522847,21 11,21 L10,21 C9.44771525,21 9,20.5522847 9,20 L9,4 C9,3.44771525 9.44771525,3 10,3 Z" fill="#000000" />
+												<rect fill="#000000" opacity="0.3" transform="translate(17.825568, 11.945519) rotate(-19.000000) translate(-17.825568, -11.945519)" x="16.3255682" y="2.94551858" width="3" height="18" rx="1" />
+											</g>
+										</svg>
+									
+									</span>
+									<span class="menu-text">Usuarios</span>
+								</a>
+							</li>--%>
+							
+						</ul>
+						<!--end::Menu Nav-->
+					</div>
+					<!--end::Menu Container-->
+				</div>
+				<!--end::Aside Menu-->
+			</div>
+			<!--end::Aside-->
+			<!--begin::Wrapper-->
+			<div class="d-flex flex-column flex-row-fluid wrapper" id="kt_wrapper">
+				<!--begin::Header-->
+				<div id="kt_header" class="header header-fixed" style="background-color: #565656;">
+					<!--begin::Container-->
+					<div class="container-fluid d-flex align-items-stretch justify-content-between">
+						<div></div>
+						<!--begin::Topbar-->
+						<div class="topbar">
+							<div class="topbar-item">
+									<div class="btn btn-icon w-auto btn-clean d-flex align-items-center btn-lg px-2" id="kt_quick_user_toggle">
+											<div class="header-datetime">
+												<div class="header-date">
+												  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+													<line x1="16" y1="2" x2="16" y2="6"></line>
+													<line x1="8" y1="2" x2="8" y2="6"></line>
+													<line x1="3" y1="10" x2="21" y2="10"></line>
+												  </svg>
+												  <span style="font-size:2rem;"><!-- Se actualiza con JS --></span>
+												</div>
+												<div class="header-time">
+												  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<circle cx="12" cy="12" r="10"></circle>
+													<polyline points="12 6 12 12 16 14"></polyline>
+												  </svg>
+												  <span style="font-size:2rem;"><!-- Se actualiza con JS --></span>
+												</div>
+										  </div>
+									</div>
+							</div>
+							<!--begin::User-->
+							<div class="topbar-item">
+								<div class="btn btn-icon w-auto btn-clean d-flex align-items-center btn-lg px-2" id="kt_quick_user_toggle">
+									<span class="text-muted font-weight-bold font-size-base d-none d-md-inline mr-1">HOLA,</span>
+									<span id="lblUsuario" class="text-dark-50 font-weight-bolder font-size-base d-none d-md-inline mr-3">NOMBRE USUARIO</span>
+									<%--<span class="symbol symbol-35 symbol-light-success">
+										<span class="symbol-label font-size-h5 font-weight-bold">SEINFRA</span>
+									</span>--%>
+								</div>
+							</div>
+							<!--end::User-->
+						</div>
+						<!--end::Topbar-->
+					</div>
+					<!--end::Container-->
+				</div>
+				<!--end::Header-->
+				<!--begin::Content-->
+				<div class="content d-flex flex-column flex-column-fluid" id="kt_content">
+					<!--begin::Subheader-->
+					<div class="subheader py-2 py-lg-4 subheader-solid" id="kt_subheader">
+						<div class="container-fluid d-flex align-items-center justify-content-between flex-wrap flex-sm-nowrap">
+							<!--begin::Info-->
+							<div class="d-flex align-items-center flex-wrap mr-1">
+								<!--begin::Page Heading-->
+								<div class="d-flex align-items-baseline mr-5">
+									<!--begin::Page Title-->
+									<h5 class="text-dark font-weight-bold my-2 mr-5">SISTEMA DE CÉDULA DE VERIFICACIÓN DE SEGUIMIENTO MUNICIPAL</h5>
+									<!--end::Page Title-->
+									<!--begin::Breadcrumb-->
+									<%--<ul class="breadcrumb breadcrumb-transparent breadcrumb-dot font-weight-bold p-0 my-2 font-size-sm">
+										<li class="breadcrumb-item">
+											<a href="javascript:;" class="text-muted"> </a>
+										</li>
+										<li class="breadcrumb-item">
+											<a href="javascript:;" class="text-muted"></a>
+										</li>
+									</ul>--%>
+									<!--end::Breadcrumb-->
+								</div>
+								<!--end::Page Heading-->
+							</div>
+							<!--end::Info-->
+
+						</div>
+					</div>
+					<!--end::Subheader-->
+					<!--begin::Entry-->
+					<div class="d-flex flex-column-fluid">
+						<!--begin::Container-->
+						<div class="container-fluid">
+							<!--begin::Dashboard-->
+							<form id="form1" runat="server">
+								<asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server">
+								</asp:ContentPlaceHolder>
+							</form>
+							<!--end::Dashboard-->
+						</div>
+						<!--end::Container-->
+					</div>
+					<!--end::Entry-->
+				</div>
+				<!--end::Content-->
+				<!--begin::Footer-->
+				<div class="footer bg-white py-4 d-flex flex-lg-column" id="kt_footer">
+					<!--begin::Container-->
+					<div class="container-fluid d-flex flex-column flex-md-row align-items-center justify-content-between">
+						<!--begin::Copyright-->
+						<div class="text-dark order-2 order-md-1">
+							<span class="text-muted font-weight-bold mr-2">2026©</span>
+							<a href="#" target="_blank" class="text-dark-75 text-hover-primary">C E L V E R</a>
+						</div>
+						<!--end::Copyright-->
+						<!--begin::Nav-->
+						<div class="nav nav-dark">
+							<a href="#" target="_blank" class="nav-link pl-0 pr-5"></a>
+							<a href="#" target="_blank" class="nav-link pl-0 pr-5"></a>
+							<a href="#" target="_blank" class="nav-link pl-0 pr-0"></a>
+						</div>
+						<!--end::Nav-->
+					</div>
+					<!--end::Container-->
+				</div>
+				<!--end::Footer-->
+			</div>
+			<!--end::Wrapper-->
+		</div>
+		<!--end::Page-->
+	</div>
+	<!--end::Main-->
+
+	<!-- begin::User Panel-->
+	<div id="kt_quick_user" class="offcanvas offcanvas-right p-10">
+		<!--begin::Header-->
+		<div class="offcanvas-header d-flex align-items-center justify-content-between pb-5">
+			<h3 class="font-weight-bold m-0">Salir del Sistema
+			<%--<small class="text-muted font-size-sm ml-2">12 messages</small></h3>--%>
+			<a href="#" class="btn btn-xs btn-icon btn-light btn-hover-primary" id="kt_quick_user_close">
+				<i class="ki ki-close icon-xs text-muted"></i>
+			</a>
+		</div>
+		<!--end::Header-->
+		<!--begin::Content-->
+		<div class="offcanvas-content pr-5 mr-n5">
+			<!--begin::Header-->
+			<%--<div class="d-flex align-items-center mt-5">
+				<div class="symbol symbol-100 mr-5">
+					<div class="symbol-label" style="background-image:url('assets/media/users/300_21.jpg')"></div>
+					<i class="symbol-badge bg-success"></i>
+				</div>
+				<div class="d-flex flex-column">
+					<a href="#" class="font-weight-bold font-size-h5 text-dark-75 text-hover-primary">James Jones</a>
+					<div class="text-muted mt-1">Application Developer</div>
+					<div class="navi mt-2">
+						<a href="#" class="navi-item">
+							<span class="navi-link p-0 pb-2">
+								<span class="navi-icon mr-1">
+									<span class="svg-icon svg-icon-lg svg-icon-primary">
+										
+										<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+											<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+												<rect x="0" y="0" width="24" height="24" />
+												<path d="M21,12.0829584 C20.6747915,12.0283988 20.3407122,12 20,12 C16.6862915,12 14,14.6862915 14,18 C14,18.3407122 14.0283988,18.6747915 14.0829584,19 L5,19 C3.8954305,19 3,18.1045695 3,17 L3,8 C3,6.8954305 3.8954305,6 5,6 L19,6 C20.1045695,6 21,6.8954305 21,8 L21,12.0829584 Z M18.1444251,7.83964668 L12,11.1481833 L5.85557487,7.83964668 C5.4908718,7.6432681 5.03602525,7.77972206 4.83964668,8.14442513 C4.6432681,8.5091282 4.77972206,8.96397475 5.14442513,9.16035332 L11.6444251,12.6603533 C11.8664074,12.7798822 12.1335926,12.7798822 12.3555749,12.6603533 L18.8555749,9.16035332 C19.2202779,8.96397475 19.3567319,8.5091282 19.1603533,8.14442513 C18.9639747,7.77972206 18.5091282,7.6432681 18.1444251,7.83964668 Z" fill="#000000" />
+												<circle fill="#000000" opacity="0.3" cx="19.5" cy="17.5" r="2.5" />
+											</g>
+										</svg>
+										
+									</span>
+								</span>
+								<span class="navi-text text-muted text-hover-primary">jm@softplus.com</span>
+							</span>
+						</a>
+					</div>
+				</div>
+			</div>--%>
+			<!--end::Header-->
+			<!--begin::Separator-->
+			<%--<div class="separator separator-dashed mt-8 mb-5"></div>--%>
+			<!--end::Separator-->
+			
+			<!--begin::Separator-->
+			<%--<div class="separator separator-dashed my-7"></div>--%>
+			<!--end::Separator-->
+			<!--begin::Notifications-->
+			<div>
+				<!--begin:Heading-->
+				<%--<h5 class="mb-5">Salir del Sistema</h5>--%>
+				<a href="javascript:;" onclick="eliminarsesion()" class="btn btn-primary font-weight-bolder">
+					<span class="svg-icon svg-icon-md">
+						<!--begin::Svg Icon | path:assets/media/svg/icons/Design/Flatten.svg-->
+						<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+							<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+								<rect x="0" y="0" width="24" height="24"></rect>
+								<circle fill="#000000" cx="9" cy="15" r="6"></circle>
+								<path d="M8.8012943,7.00241953 C9.83837775,5.20768121 11.7781543,4 14,4 C17.3137085,4 20,6.6862915 20,10 C20,12.2218457 18.7923188,14.1616223 16.9975805,15.1987057 C16.9991904,15.1326658 17,15.0664274 17,15 C17,10.581722 13.418278,7 9,7 C8.93357256,7 8.86733422,7.00080962 8.8012943,7.00241953 Z" fill="#000000" opacity="0.3"></path>
+							</g>
+						</svg>
+						<!--end::Svg Icon-->
+				</span>Salir del Sistema</a>
+				<!--end:Heading-->
+				<!--begin::Item-->
+				<%--<div class="d-flex align-items-center bg-light-warning rounded p-5 gutter-b">
+					<span class="svg-icon svg-icon-warning mr-5">
+						<span class="svg-icon svg-icon-lg">
+							
+							<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+								<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+									<rect x="0" y="0" width="24" height="24" />
+									<path d="M5,3 L6,3 C6.55228475,3 7,3.44771525 7,4 L7,20 C7,20.5522847 6.55228475,21 6,21 L5,21 C4.44771525,21 4,20.5522847 4,20 L4,4 C4,3.44771525 4.44771525,3 5,3 Z M10,3 L11,3 C11.5522847,3 12,3.44771525 12,4 L12,20 C12,20.5522847 11.5522847,21 11,21 L10,21 C9.44771525,21 9,20.5522847 9,20 L9,4 C9,3.44771525 9.44771525,3 10,3 Z" fill="#000000" />
+									<rect fill="#000000" opacity="0.3" transform="translate(17.825568, 11.945519) rotate(-19.000000) translate(-17.825568, -11.945519)" x="16.3255682" y="2.94551858" width="3" height="18" rx="1" />
+								</g>
+							</svg>
+							
+						</span>
+					</span>
+					<div class="d-flex flex-column flex-grow-1 mr-2">
+						<a href="#" class="font-weight-normal text-dark-75 text-hover-primary font-size-lg mb-1">Another purpose persuade</a>
+						<span class="text-muted font-size-sm">Due in 2 Days</span>
+					</div>
+					<span class="font-weight-bolder text-warning py-1 font-size-lg">+28%</span>
+				</div>--%>
+				<!--end::Item-->
+				<!--begin::Item-->
+				<%--<div class="d-flex align-items-center bg-light-success rounded p-5 gutter-b">
+					<span class="svg-icon svg-icon-success mr-5">
+						<span class="svg-icon svg-icon-lg">
+							
+							<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+								<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+									<rect x="0" y="0" width="24" height="24" />
+									<path d="M12.2674799,18.2323597 L12.0084872,5.45852451 C12.0004303,5.06114792 12.1504154,4.6768183 12.4255037,4.38993949 L15.0030167,1.70195304 L17.5910752,4.40093695 C17.8599071,4.6812911 18.0095067,5.05499603 18.0083938,5.44341307 L17.9718262,18.2062508 C17.9694575,19.0329966 17.2985816,19.701953 16.4718324,19.701953 L13.7671717,19.701953 C12.9505952,19.701953 12.2840328,19.0487684 12.2674799,18.2323597 Z" fill="#000000" fill-rule="nonzero" transform="translate(14.701953, 10.701953) rotate(-135.000000) translate(-14.701953, -10.701953)" />
+									<path d="M12.9,2 C13.4522847,2 13.9,2.44771525 13.9,3 C13.9,3.55228475 13.4522847,4 12.9,4 L6,4 C4.8954305,4 4,4.8954305 4,6 L4,18 C4,19.1045695 4.8954305,20 6,20 L18,20 C19.1045695,20 20,19.1045695 20,18 L20,13 C20,12.4477153 20.4477153,12 21,12 C21.5522847,12 22,12.4477153 22,13 L22,18 C22,20.209139 20.209139,22 18,22 L6,22 C3.790861,22 2,20.209139 2,18 L2,6 C2,3.790861 3.790861,2 6,2 L12.9,2 Z" fill="#000000" fill-rule="nonzero" opacity="0.3" />
+								</g>
+							</svg>
+							
+						</span>
+					</span>
+					<div class="d-flex flex-column flex-grow-1 mr-2">
+						<a href="#" class="font-weight-normal text-dark-75 text-hover-primary font-size-lg mb-1">Would be to people</a>
+						<span class="text-muted font-size-sm">Due in 2 Days</span>
+					</div>
+					<span class="font-weight-bolder text-success py-1 font-size-lg">+50%</span>
+				</div>--%>
+				<!--end::Item-->
+				
+				
+			</div>
+			<!--end::Notifications-->
+		</div>
+		<!--end::Content-->
+	</div>
+	<!-- end::User Panel-->
+
+
+	
+	<!--begin::Scrolltop-->
+	<div id="kt_scrolltop" class="scrolltop">
+		<span class="svg-icon">
+			<!--begin::Svg Icon | path:assets/media/svg/icons/Navigation/Up-2.svg-->
+			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+				<g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+					<polygon points="0 0 24 0 24 24 0 24" />
+					<rect fill="#000000" opacity="0.3" x="11" y="10" width="2" height="10" rx="1" />
+					<path d="M6.70710678,12.7071068 C6.31658249,13.0976311 5.68341751,13.0976311 5.29289322,12.7071068 C4.90236893,12.3165825 4.90236893,11.6834175 5.29289322,11.2928932 L11.2928932,5.29289322 C11.6714722,4.91431428 12.2810586,4.90106866 12.6757246,5.26284586 L18.6757246,10.7628459 C19.0828436,11.1360383 19.1103465,11.7686056 18.7371541,12.1757246 C18.3639617,12.5828436 17.7313944,12.6103465 17.3242754,12.2371541 L12.0300757,7.38413782 L6.70710678,12.7071068 Z" fill="#000000" fill-rule="nonzero" />
+				</g>
+			</svg>
+			<!--end::Svg Icon-->
+		</span>
+	</div>
+	<!--end::Scrolltop-->
+	
+	
+	<script>var HOST_URL = "https://keenthemes.com/metronic/tools/preview";</script>
+	<!--begin::Global Config(global config for global JS scripts)-->
+	<script>var KTAppSettings = { "breakpoints": { "sm": 576, "md": 768, "lg": 992, "xl": 1200, "xxl": 1200 }, "colors": { "theme": { "base": { "white": "#ffffff", "primary": "#6993FF", "secondary": "#E5EAEE", "success": "#1BC5BD", "info": "#8950FC", "warning": "#FFA800", "danger": "#F64E60", "light": "#F3F6F9", "dark": "#212121" }, "light": { "white": "#ffffff", "primary": "#E1E9FF", "secondary": "#ECF0F3", "success": "#C9F7F5", "info": "#EEE5FF", "warning": "#FFF4DE", "danger": "#FFE2E5", "light": "#F3F6F9", "dark": "#D6D6E0" }, "inverse": { "white": "#ffffff", "primary": "#ffffff", "secondary": "#212121", "success": "#ffffff", "info": "#ffffff", "warning": "#ffffff", "danger": "#ffffff", "light": "#464E5F", "dark": "#ffffff" } }, "gray": { "gray-100": "#F3F6F9", "gray-200": "#ECF0F3", "gray-300": "#E5EAEE", "gray-400": "#D6D6E0", "gray-500": "#B5B5C3", "gray-600": "#80808F", "gray-700": "#464E5F", "gray-800": "#1B283F", "gray-900": "#212121" } }, "font-family": "Poppins" };</script>
+	<!--end::Global Config-->
+	<%--<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>--%>
+	<script src="assets/plugins/global/plugins.bundle.js"></script>
+	<script src="assets/plugins/custom/prismjs/prismjs.bundle.js"></script>
+	<script src="assets/js/scripts.bundle.js"></script>
+	<!--begin::Global Theme Bundle(used by all pages)-->
+	
+	<!--end::Global Theme Bundle-->
+	<!--begin::Page Vendors(used by this page)-->
+	<%--<script src="assets/plugins/custom/fullcalendar/fullcalendar.bundle.js"></script>--%>
+	<%--<script src="//maps.google.com/maps/api/js?key=AIzaSyBTGnKT7dt597vo9QgeQ7BFhvSRP4eiMSM"></script>
+	<script src="assets/plugins/custom/gmaps/gmaps.js"></script>--%>
+	<!--end::Page Vendors-->
+	<!--begin::Page Scripts(used by this page)-->
+	<script src="assets/js/pages/widgets.js"></script>
+	<script src="assets/plugins/custom/datatables/datatables.bundle.js"></script>
+	<script src="assets/js/pages/crud/forms/widgets/bootstrap-datepicker.es.js"></script>
+	<script src="assets/js/pages/crud/forms/widgets/bootstrap-datepicker.js"></script>
+    <script src="assets/plugins/custom/uppy/uppy.bundle.js"></script>
+    
+    <script src="assets/js/Obras.js"></script>
+
+    <%--<script src="assets/js/Cedula.js"></script>--%>
+
+	<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let usuario = sessionStorage.getItem("name");
+            if (usuario) {
+                document.getElementById("lblUsuario").textContent = usuario;
+            } else {
+                document.getElementById("lblUsuario").textContent = "INVITADO";
+            }
+
+        });
+        function eliminarsesion() {
+            Swal.fire({
+                title: "Cerrar Sesión",
+                text: "¿Está Seguro de salir?",
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonText: "Sí",
+                cancelButtonText: "Cancelar",
+            })
+                .then(resultado => {
+                    if (resultado.value) {
+                        // Hicieron click en "Sí"
+                        sessionStorage.clear();
+                        window.location.href = 'Default.aspx';
+                    } else {
+
+                    }
+                });
+        }
+	</script>
+</body>
+<!--end::Body-->
+</html>

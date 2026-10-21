@@ -1,0 +1,813 @@
+/* ================================================
+   MedGuard - Sistema de Seguimiento Clínico
+   Estilos personalizados para Metronic 7.0
+   Para ASP.NET Web Forms / .NET
+   ================================================ */
+
+/* ============== Variables de Colores Médicos ============== */
+:root {
+  /* Colores de semáforo médico (estatus / alertas, sin cambio de significado) */
+  --mg-critical: #F64E60;
+  --mg-critical-light: rgba(246, 78, 96, 0.1);
+  --mg-critical-border: rgba(246, 78, 96, 0.25);
+  
+  --mg-severe: #FFA800;
+  --mg-severe-light: rgba(255, 168, 0, 0.1);
+  --mg-severe-border: rgba(255, 168, 0, 0.25);
+  
+  --mg-stable: #1BC5BD;
+  --mg-stable-light: rgba(27, 197, 189, 0.1);
+  --mg-stable-border: rgba(27, 197, 189, 0.25);
+  
+  /* ── Paleta institucional H. Ayuntamiento de Chilón ── */
+  --mg-primary: #D2232A;          /* Rojo principal (marca) */
+  --mg-primary-dark: #A11B1B;     /* Rojo oscuro (hover / headers) */
+  --mg-verde: #00A651;            /* Verde hoja */
+  --mg-verde-dark: #086B36;       /* Verde oscuro */
+  --mg-cafe: #6E4A2E;             /* Café (manos) */
+  --mg-cafe-dark: #4A331F;        /* Café oscuro (para gradientes) */
+  --mg-dorado: #F2A900;           /* Dorado (franja) */
+  --mg-dorado-dark: #C98600;      /* Dorado oscuro (para gradientes) */
+
+  --mg-brand-bg: #1A1A1A;         /* Fondo del sidebar/brand */
+  --mg-brand-bg-2: #141414;
+
+  --mg-dark: #1A1A1A;
+  --mg-dark-75: #464E5F;
+}
+
+/* ============== Layout Principal ============== */
+body {
+  font-family: 'Poppins', Helvetica, sans-serif;
+}
+
+/* ============== Brand / Logo ============== */
+.brand {
+  background: linear-gradient(160deg, var(--mg-brand-bg-2) 0%, var(--mg-brand-bg) 100%);
+  padding: 0 20px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--mg-dorado);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* Caja blanca para que el logo institucional (fondo claro) resalte sobre el sidebar oscuro */
+.brand-logo-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}
+
+.brand-logo-box img {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.aside-minimize .brand-logo-box {
+  padding: 5px;
+}
+
+.aside-minimize .brand-logo-box img {
+  height: 26px;
+}
+
+.brand-text {
+  color: #fff;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+
+.aside-minimize .brand-text {
+  opacity: 0;
+  display: none;
+}
+
+.brand-toggle {
+  color: #6E6E6E;
+}
+
+.brand-toggle:hover {
+  color: var(--mg-dorado);
+}
+
+/* ============== Aside / Sidebar ============== */
+.aside {
+  background-color: var(--mg-brand-bg);
+}
+
+.aside-menu {
+  background-color: var(--mg-brand-bg);
+}
+
+.aside-menu .menu-nav > .menu-section .menu-text {
+  color: #6E6E6E;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aside-menu .menu-nav > .menu-item > .menu-link .menu-text {
+  color: #B0B0B0;
+}
+
+.aside-menu .menu-nav > .menu-item:hover > .menu-link .menu-text,
+.aside-menu .menu-nav > .menu-item.menu-item-active > .menu-link .menu-text {
+  color: #fff;
+}
+
+.aside-menu .menu-nav > .menu-item > .menu-link .svg-icon svg {
+  stroke: #6E6E6E;
+}
+
+.aside-menu .menu-nav > .menu-item:hover > .menu-link .svg-icon svg,
+.aside-menu .menu-nav > .menu-item.menu-item-active > .menu-link .svg-icon svg {
+  stroke: var(--mg-primary);
+}
+
+.aside-menu .menu-nav > .menu-item.menu-item-active {
+  background-color: var(--mg-brand-bg-2);
+}
+
+.aside-menu .menu-nav > .menu-item.menu-item-active > .menu-link {
+  background-color: rgba(210, 35, 42, 0.14);
+  border-left: 3px solid var(--mg-primary);
+}
+
+.aside-menu .menu-nav > .menu-item > .menu-link {
+  border-left: 3px solid transparent;
+}
+
+.aside-menu .menu-nav > .menu-item:hover > .menu-link {
+  background-color: rgba(255,255,255,0.04);
+}
+
+/* Menu labels / badges */
+.menu-label .label {
+  min-width: 22px;
+  padding: 0 6px;
+  height: 22px;
+  line-height: 22px;
+  font-size: 0.7rem;
+}
+
+/* Aside Footer - User Panel */
+.aside-footer {
+  background-color: var(--mg-brand-bg-2);
+}
+
+.aside-user {
+  padding: 15px;
+}
+
+.aside-user-name {
+  display: block;
+}
+
+.aside-user-role {
+  display: block;
+  font-size: 0.75rem;
+}
+
+.aside-minimize .aside-user-info,
+.aside-minimize .aside-user-name,
+.aside-minimize .aside-user-role {
+  display: none;
+}
+
+/* ============== Header ============== */
+.header {
+  background: linear-gradient(90deg, var(--mg-primary-dark) 0%, var(--mg-primary) 100%) !important;
+  border-bottom: none;
+}
+
+.header .header-datetime,
+.header .header-datetime span,
+.header .topbar-item .text-muted,
+.header .topbar-item .text-dark-50 {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+.header .header-date svg,
+.header .header-time svg {
+  color: rgba(255,255,255,0.75);
+}
+
+/* Subheader (título de la página) con acento dorado inferior */
+#kt_subheader {
+  border-bottom: 3px solid var(--mg-dorado);
+}
+
+#kt_subheader h5 {
+  color: var(--mg-primary-dark) !important;
+}
+
+/* Quick Search */
+.quick-search-inline .input-group {
+  background-color: #F3F6F9;
+  border-radius: 0.42rem;
+}
+
+.quick-search-inline .form-control {
+  background-color: transparent;
+  border: none;
+}
+
+.quick-search-inline .input-group-prepend .input-group-text,
+.quick-search-inline .input-group-append .input-group-text {
+  background-color: transparent;
+  border: none;
+}
+
+kbd {
+  background-color: #E4E6EF;
+  color: #7E8299;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+}
+
+/* ============== Cards con colores médicos ============== */
+.card.card-custom.border-left {
+  border-left-width: 4px !important;
+  border-left-style: solid !important;
+}
+
+.card.card-custom.border-danger {
+  border-left-color: var(--mg-critical) !important;
+}
+
+.card.card-custom.border-warning {
+  border-left-color: var(--mg-severe) !important;
+}
+
+.card.card-custom.border-success {
+  border-left-color: var(--mg-stable) !important;
+}
+
+.border-3 {
+  border-width: 3px !important;
+}
+
+/* ============== Tabla de Pacientes ============== */
+.table-head-custom thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #B5B5C3;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #EBEDF3;
+  padding: 15px 0;
+}
+
+.table-vertical-center tbody td {
+  vertical-align: middle;
+  padding: 15px 0;
+  border-bottom: 1px solid #EBEDF3;
+}
+
+.table-vertical-center tbody tr:hover {
+  background-color: #F3F6F9;
+}
+
+/* Patient Info */
+.symbol-light-danger {
+  background-color: var(--mg-critical-light);
+}
+
+.symbol-light-danger .symbol-label {
+  color: var(--mg-critical);
+}
+
+.symbol-light-warning {
+  background-color: var(--mg-severe-light);
+}
+
+.symbol-light-warning .symbol-label {
+  color: var(--mg-severe);
+}
+
+.symbol-light-success {
+  background-color: var(--mg-stable-light);
+}
+
+.symbol-light-success .symbol-label {
+  color: var(--mg-stable);
+}
+
+/* ============== Labels / Badges de Estado ============== */
+.label-light-danger {
+  background-color: var(--mg-critical-light) !important;
+  color: var(--mg-critical) !important;
+}
+
+.label-light-warning {
+  background-color: var(--mg-severe-light) !important;
+  color: var(--mg-severe) !important;
+}
+
+.label-light-success {
+  background-color: var(--mg-stable-light) !important;
+  color: var(--mg-stable) !important;
+}
+
+.label-inline {
+  padding: 0.5rem 1rem;
+  border-radius: 0.42rem;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.badge-circle {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+/* ============== Signos Vitales ============== */
+.text-danger {
+  color: var(--mg-critical) !important;
+}
+
+.text-warning {
+  color: var(--mg-severe) !important;
+}
+
+.text-success {
+  color: var(--mg-stable) !important;
+}
+
+/* Vitals Grid */
+.vitals-display {
+  display: flex;
+  gap: 15px;
+}
+
+.vital-box {
+  text-align: center;
+  min-width: 50px;
+}
+
+.vital-box small {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vital-box span {
+  font-size: 0.95rem;
+}
+
+/* ============== Dropdowns ============== */
+.dropdown-menu-sm {
+  min-width: 160px;
+}
+
+.dropdown-item {
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  color: var(--mg-dark-75);
+}
+
+.dropdown-item:hover {
+  background-color: #F3F6F9;
+  color: var(--mg-primary);
+}
+
+.dropdown-item i {
+  color: #B5B5C3;
+  font-size: 1.1rem;
+}
+
+.dropdown-item:hover i {
+  color: var(--mg-primary);
+}
+
+.dropdown-item.text-danger:hover {
+  color: var(--mg-critical);
+}
+
+.dropdown-item.text-danger:hover i {
+  color: var(--mg-critical);
+}
+
+/* ============== Modales ============== */
+.modal-header {
+  border-bottom: 1px solid #EBEDF3;
+  padding: 1.5rem 1.75rem;
+}
+
+.modal-title {
+  font-weight: 600;
+  color: var(--mg-dark);
+}
+
+.modal-body {
+  padding: 1.75rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #EBEDF3;
+  padding: 1.25rem 1.75rem;
+}
+
+/* Separadores */
+.separator-dashed {
+  border-top: 1px dashed #E4E6EF;
+}
+
+/* ============== Formularios ============== */
+.form-control {
+  border: 1px solid #E4E6EF;
+  border-radius: 0.42rem;
+  font-size: 0.925rem;
+  color: var(--mg-dark-75);
+}
+
+.form-control:focus {
+  border-color: var(--mg-primary);
+  box-shadow: none;
+}
+
+.form-control::placeholder {
+  color: #B5B5C3;
+}
+
+label.font-weight-bold {
+  font-size: 0.925rem;
+  color: var(--mg-dark-75);
+  margin-bottom: 0.5rem;
+}
+
+/* Checkboxes */
+.checkbox.checkbox-outline.checkbox-danger > span {
+  border-color: var(--mg-critical);
+}
+
+.checkbox.checkbox-outline.checkbox-danger > input:checked ~ span {
+  background-color: var(--mg-critical);
+  border-color: var(--mg-critical);
+}
+
+.checkbox.checkbox-outline.checkbox-warning > span {
+  border-color: var(--mg-severe);
+}
+
+.checkbox.checkbox-outline.checkbox-warning > input:checked ~ span {
+  background-color: var(--mg-severe);
+  border-color: var(--mg-severe);
+}
+
+/* ============== Alertas de Clasificación ============== */
+.alert-custom.alert-light-success {
+  background-color: var(--mg-stable-light);
+  border-color: var(--mg-stable-border);
+}
+
+.alert-custom.alert-light-warning {
+  background-color: var(--mg-severe-light);
+  border-color: var(--mg-severe-border);
+}
+
+.alert-custom.alert-light-danger {
+  background-color: var(--mg-critical-light);
+  border-color: var(--mg-critical-border);
+}
+
+/* ============== Timeline ============== */
+.timeline-3 .timeline-items .timeline-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.timeline-3 .timeline-items .timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-3 .timeline-items .timeline-media {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 1rem;
+}
+
+.timeline-3 .timeline-items .timeline-content {
+  flex: 1;
+}
+
+/* ============== Tabs de Navegación ============== */
+.nav-tabs-line .nav-link {
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 0;
+  margin-right: 2rem;
+  color: #B5B5C3;
+  font-weight: 500;
+}
+
+.nav-tabs-line .nav-link:hover,
+.nav-tabs-line .nav-link.active {
+  color: var(--mg-primary);
+  border-bottom-color: var(--mg-primary);
+}
+
+.nav-tabs-line-2x .nav-link {
+  border-bottom-width: 3px;
+}
+
+/* ============== Pulse Animation ============== */
+.pulse {
+  position: relative;
+}
+
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid var(--mg-critical);
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.pulse-danger .pulse-ring {
+  border-color: var(--mg-critical);
+}
+
+/* ============== Toasts ============== */
+.toast-container .toast {
+  min-width: 300px;
+  margin-bottom: 10px;
+  border-radius: 0.42rem;
+  box-shadow: 0 0 50px 0 rgba(82, 63, 105, 0.15);
+}
+
+.toast-success {
+  background-color: var(--mg-stable);
+  color: #fff;
+}
+
+.toast-danger {
+  background-color: var(--mg-critical);
+  color: #fff;
+}
+
+.toast-warning {
+  background-color: var(--mg-severe);
+  color: #fff;
+}
+
+.toast-info {
+  background-color: var(--mg-primary);
+  color: #fff;
+}
+
+/* ============== SVG Icons ============== */
+.svg-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.svg-icon.svg-icon-md svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.svg-icon.svg-icon-lg svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.svg-icon.svg-icon-xl svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.svg-icon.svg-icon-2x svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.svg-icon.svg-icon-primary svg {
+  stroke: var(--mg-primary);
+}
+
+.svg-icon.svg-icon-danger svg {
+  stroke: var(--mg-critical);
+}
+
+.svg-icon.svg-icon-warning svg {
+  stroke: var(--mg-severe);
+}
+
+.svg-icon.svg-icon-success svg {
+  stroke: var(--mg-stable);
+}
+
+/* ============== Utilidades ============== */
+.gutter-b {
+  margin-bottom: 25px;
+}
+
+.card-stretch {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 25px);
+}
+
+/* ============== Nav Pills para Filtros ============== */
+.nav-pills-sm .nav-link {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 0.42rem;
+  color: #B5B5C3;
+}
+
+.nav-pills-sm .nav-link:hover {
+  background-color: #F3F6F9;
+  color: var(--mg-dark-75);
+}
+
+.nav-pills-sm .nav-link.active {
+  background-color: var(--mg-primary);
+  color: #fff;
+}
+
+.nav-dark-75 .nav-link {
+  color: var(--mg-dark-75);
+}
+
+/* ============== Responsive ============== */
+@media (max-width: 991.98px) {
+  .header-mobile {
+    background-color: #1E1E2D;
+    border-bottom: none;
+    padding: 0 15px;
+    height: 60px;
+  }
+  
+  .header-mobile .brand-logo {
+    display: flex;
+    align-items: center;
+  }
+  
+  .aside.aside-on {
+    display: flex !important;
+  }
+  
+  .quick-search-inline {
+    display: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .card-toolbar {
+    margin-top: 1rem;
+  }
+  
+  .nav-pills-sm .nav-link {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* ============== Botones primarios (paleta Chilón) ============== */
+.btn.btn-primary,
+.btn.btn-primary:not(:disabled):not(.disabled).active,
+.btn.btn-primary:not(:disabled):not(.disabled):active,
+.show > .btn.btn-primary.dropdown-toggle {
+  background-color: var(--mg-primary) !important;
+  border-color: var(--mg-primary) !important;
+}
+
+.btn.btn-primary:hover,
+.btn.btn-primary:focus {
+  background-color: var(--mg-primary-dark) !important;
+  border-color: var(--mg-primary-dark) !important;
+  box-shadow: 0 0 0 0.2rem rgba(210, 35, 42, 0.25) !important;
+}
+
+.btn.btn-light-primary {
+  background-color: rgba(210, 35, 42, 0.1) !important;
+  color: var(--mg-primary) !important;
+}
+
+.btn.btn-light-primary:hover {
+  background-color: var(--mg-primary) !important;
+  color: #fff !important;
+}
+
+/* Enlaces / footer institucional */
+.footer a.text-hover-primary:hover {
+  color: var(--mg-primary) !important;
+}
+
+/* ============== Utilidades "primary" (Bootstrap/Metronic → rojo Chilón) ============== */
+.text-primary {
+  color: var(--mg-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--mg-primary) !important;
+}
+
+.bg-light-primary {
+  background-color: rgba(210, 35, 42, 0.1) !important;
+}
+
+.border-primary {
+  border-color: var(--mg-primary) !important;
+}
+
+.badge-primary {
+  background-color: var(--mg-primary) !important;
+  color: #fff !important;
+}
+
+.badge-light-primary {
+  background-color: rgba(210, 35, 42, 0.1) !important;
+  color: var(--mg-primary) !important;
+}
+
+.label-primary,
+.label.label-light-primary {
+  background-color: rgba(210, 35, 42, 0.1) !important;
+  color: var(--mg-primary) !important;
+}
+
+.alert-light-primary {
+  background-color: rgba(210, 35, 42, 0.08) !important;
+  border-color: rgba(210, 35, 42, 0.2) !important;
+  color: var(--mg-primary-dark) !important;
+}
+
+.btn-outline-primary {
+  color: var(--mg-primary) !important;
+  border-color: var(--mg-primary) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--mg-primary) !important;
+  border-color: var(--mg-primary) !important;
+  color: #fff !important;
+}
+
+.checkbox.checkbox-outline.checkbox-primary > span {
+  border-color: var(--mg-primary);
+}
+
+.checkbox.checkbox-outline.checkbox-primary > input:checked ~ span {
+  background-color: var(--mg-primary);
+  border-color: var(--mg-primary);
+}
+
+/* ============== Print Styles ============== */
+@media print {
+  .aside,
+  .header,
+  .footer,
+  .modal,
+  .dropdown-menu {
+    display: none !important;
+  }
+  
+  .wrapper {
+    margin-left: 0 !important;
+  }
+  
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+}

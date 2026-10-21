@@ -1,0 +1,128 @@
+﻿/* ============== Tabla de Pacientes ============== */
+.table-container {
+    overflow-x: auto;
+}
+
+.table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.table-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    background-color: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .filter-btn:hover {
+        background-color: var(--secondary);
+        color: var(--foreground);
+    }
+
+    .filter-btn.active {
+        background-color: var(--secondary);
+        color: var(--foreground);
+        border-color: var(--muted-foreground);
+    }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .data-table th {
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted-foreground);
+        background-color: var(--secondary);
+        border-bottom: 1px solid var(--border);
+    }
+
+        .data-table th:first-child {
+            border-radius: var(--radius) 0 0 0;
+        }
+
+        .data-table th:last-child {
+            border-radius: 0 var(--radius) 0 0;
+        }
+
+    .data-table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+        .data-table tbody tr:hover {
+            background-color: var(--secondary);
+        }
+
+.patient-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.patient-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+    .patient-avatar.critical {
+        background-color: var(--critical-bg);
+        color: var(--critical);
+        border: 2px solid var(--critical);
+    }
+
+    .patient-avatar.severe {
+        background-color: var(--severe-bg);
+        color: var(--severe);
+        border: 2px solid var(--severe);
+    }
+
+    .patient-avatar.stable {
+        background-color: var(--stable-bg);
+        color: var(--stable);
+        border: 2px solid var(--stable);
+    }
+
+.patient-name {
+    font-weight: 500;
+    color: var(--foreground);
+    margin-bottom: 2px;
+}
+
+.patient-id {
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    font-family: var(--font-mono);
+}

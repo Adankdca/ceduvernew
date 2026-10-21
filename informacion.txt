@@ -1,0 +1,5 @@
+base de datos:BDConseocoita
+otras herramientas
+cristal report
+dapper
+epplus
