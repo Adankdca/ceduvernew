@@ -81,7 +81,36 @@ namespace Ceduver.Models
             // Control
             public int acciones { get; set; }
             public bool franja { get; set; }
+
+            // Importación desde Sistema de Seguimiento
+            public int idObraSeguimiento { get; set; }  // 0 = captura manual
         }
 
+        // ── DTOs para Importación desde Sistema de Seguimiento ───────────
+        public class ObraSeguimientoDTO
+        {
+            public int idobra { get; set; }
+            public string noObra { get; set; }
+            public string nombre { get; set; }
+            public string subrubro { get; set; }
+            public string anio { get; set; }
+            public int numAcciones { get; set; }
+            public bool yaRegistrada { get; set; }
+        }
+
+        public class AccionSeguimientoDTO
+        {
+            public int idAccion { get; set; }
+            public string accion { get; set; }
+            public int anio { get; set; }
+            public string tipoAccion { get; set; }
+            public string tipoEjecucion { get; set; }
+        }
+
+        public class PreviewImportDTO
+        {
+            public ObraSeguimientoDTO obra { get; set; }
+            public List<AccionSeguimientoDTO> acciones { get; set; }
+        }
     }
 }

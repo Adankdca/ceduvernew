@@ -519,6 +519,7 @@
     <Content Include="assets\media\error\bg4.jpg" />
     <Content Include="assets\media\error\bg5.jpg" />
     <Content Include="assets\media\error\bg6.jpg" />
+    <Content Include="assets\media\escudo.png" />
     <Content Include="assets\media\logo.png" />
     <Content Include="assets\media\logos\favicon.ico" />
     <Content Include="assets\media\logos\logo-dark.png" />
@@ -543,6 +544,7 @@
     <Content Include="assets\media\logos\logo.jpg" />
     <Content Include="assets\media\logos\logo.png" />
     <Content Include="assets\media\logos\stars.png" />
+    <Content Include="assets\media\logo_chilon.png" />
     <Content Include="assets\media\misc\bg-1.jpg" />
     <Content Include="assets\media\misc\bg-2.jpg" />
     <Content Include="assets\media\plugins\jstree\32px.png" />

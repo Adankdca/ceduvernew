@@ -7,6 +7,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -262,15 +263,27 @@ namespace Ceduver.Controllers
             {
                 conn.Open();
 
-                var cmd = new SqlCommand(@"
-            SELECT 
-                idfotosgeo,
-                foto,
-                fechaalta
-            FROM TBLD_Fotosbasegeoreferencia
-            WHERE IDAcciones = @idAcciones
-            ORDER BY idfotosgeo DESC", conn);
+                // Verificar si ya existen las columnas de coordenadas
+                bool tieneCoords = false;
+                try
+                {
+                    var chk = new SqlCommand(
+                        "SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS " +
+                        "WHERE TABLE_NAME='TBLD_Fotosbasegeoreferencia' AND COLUMN_NAME='latitud'", conn);
+                    tieneCoords = (int)chk.ExecuteScalar() > 0;
+                }
+                catch { }
 
+                string sqlFotos = tieneCoords
+                    ? @"SELECT idfotosgeo, foto, fechaalta,
+                               ISNULL(latitud,'') AS latitud, ISNULL(longuitud,'') AS longuitud
+                        FROM TBLD_Fotosbasegeoreferencia
+                        WHERE IDAcciones = @idAcciones ORDER BY idfotosgeo DESC"
+                    : @"SELECT idfotosgeo, foto, fechaalta
+                        FROM TBLD_Fotosbasegeoreferencia
+                        WHERE IDAcciones = @idAcciones ORDER BY idfotosgeo DESC";
+
+                var cmd = new SqlCommand(sqlFotos, conn);
                 cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
 
                 using (var reader = cmd.ExecuteReader())
@@ -279,10 +292,11 @@ namespace Ceduver.Controllers
                     {
                         lista.Add(new
                         {
-                            idFoto = reader["idfotosgeo"],
-                            ruta = reader["foto"].ToString(),
-                            fechaAlta = Convert.ToDateTime(reader["fechaalta"])
-                                .ToString("dd/MM/yyyy")
+                            idFoto    = reader["idfotosgeo"],
+                            ruta      = reader["foto"].ToString(),
+                            fechaAlta = Convert.ToDateTime(reader["fechaalta"]).ToString("dd/MM/yyyy"),
+                            latitud   = tieneCoords ? reader["latitud"].ToString()   : "",
+                            longitud  = tieneCoords ? reader["longuitud"].ToString() : ""
                         });
                     }
                 }
@@ -330,45 +344,75 @@ namespace Ceduver.Controllers
         [Route("SubirFotoGeoreferencia")]
         public IHttpActionResult SubirFotoGeoreferencia()
         {
-            var httpRequest = HttpContext.Current.Request;
-
-            var file = httpRequest.Files[0];
-            var idAcciones = Convert.ToInt64(httpRequest.Form["idAcciones"]);
-            var idObra = Convert.ToInt64(httpRequest.Form["idObra"]);
-            var contrato = httpRequest.Form["contrato"];
-
-            var rutaCarpeta = "~/Uploads/Fotosgeoreferencia/";
-            var path = HttpContext.Current.Server.MapPath(rutaCarpeta);
-
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
-            var nombreArchivo = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-            var rutaCompleta = Path.Combine(path, nombreArchivo);
-
-            file.SaveAs(rutaCompleta);
-
-            var rutaGuardar = "Uploads/Fotosgeoreferencia/" + nombreArchivo;
-
-            using (var conn = new SqlConnection(connectionString))
+            try
             {
-                conn.Open();
+                var httpRequest = HttpContext.Current.Request;
 
-                var cmd = new SqlCommand(@"
-            INSERT INTO TBLD_Fotosbasegeoreferencia
-            (IDobraproyecto, IDAcciones, Contrato, foto, fechaalta)
-            VALUES (@idObra, @idAcciones, @contrato, @foto, GETDATE())
-        ", conn);
+                if (httpRequest.Files.Count == 0)
+                    return BadRequest("No se recibió ningún archivo.");
 
-                cmd.Parameters.AddWithValue("@idObra", idObra);
-                cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
-                cmd.Parameters.AddWithValue("@contrato", contrato);
-                cmd.Parameters.AddWithValue("@foto", rutaGuardar);
+                var file      = httpRequest.Files[0];
+                var idAcciones = Convert.ToInt64(httpRequest.Form["idAcciones"]);
+                var idObra     = Convert.ToInt64(httpRequest.Form["idObra"]);
+                var contrato   = httpRequest.Form["contrato"] ?? "";
+                var latitud    = httpRequest.Form["latitud"]  ?? "";
+                var longitud   = httpRequest.Form["longitud"] ?? "";
 
-                cmd.ExecuteNonQuery();
+                var rutaCarpeta = "~/Uploads/Fotosgeoreferencia/";
+                var path = HttpContext.Current.Server.MapPath(rutaCarpeta);
+
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+
+                var nombreArchivo = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                var rutaCompleta  = Path.Combine(path, nombreArchivo);
+                file.SaveAs(rutaCompleta);
+
+                var rutaGuardar = "Uploads/Fotosgeoreferencia/" + nombreArchivo;
+
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Verificar si las columnas de coordenadas ya existen
+                    bool tieneCoords = false;
+                    try
+                    {
+                        var chk = new SqlCommand(
+                            "SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS " +
+                            "WHERE TABLE_NAME='TBLD_Fotosbasegeoreferencia' AND COLUMN_NAME='latitud'", conn);
+                        tieneCoords = (int)chk.ExecuteScalar() > 0;
+                    }
+                    catch { }
+
+                    string sqlInsert = tieneCoords
+                        ? @"INSERT INTO TBLD_Fotosbasegeoreferencia
+                            (IDobraproyecto, IDAcciones, Contrato, foto, fechaalta, latitud, longuitud)
+                            VALUES (@idObra, @idAcciones, @contrato, @foto, GETDATE(), @latitud, @longitud)"
+                        : @"INSERT INTO TBLD_Fotosbasegeoreferencia
+                            (IDobraproyecto, IDAcciones, Contrato, foto, fechaalta)
+                            VALUES (@idObra, @idAcciones, @contrato, @foto, GETDATE())";
+
+                    var cmd = new SqlCommand(sqlInsert, conn);
+                    cmd.Parameters.AddWithValue("@idObra",    idObra);
+                    cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
+                    cmd.Parameters.AddWithValue("@contrato",  contrato);
+                    cmd.Parameters.AddWithValue("@foto",      rutaGuardar);
+                    if (tieneCoords)
+                    {
+                        cmd.Parameters.AddWithValue("@latitud",  string.IsNullOrEmpty(latitud)  ? (object)DBNull.Value : latitud);
+                        cmd.Parameters.AddWithValue("@longitud", string.IsNullOrEmpty(longitud) ? (object)DBNull.Value : longitud);
+                    }
+
+                    cmd.ExecuteNonQuery();
+                }
+
+                return Ok(new { mensaje = "Foto subida correctamente" });
             }
-
-            return Ok();
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
         [HttpPost]
         [Route("EliminarFotoGeoreferencia")]
@@ -422,17 +466,80 @@ namespace Ceduver.Controllers
 
         #region Datos Inicio
 
+        /// <summary>
+        /// Devuelve los montos de cada fuente de financiamiento para precargar la Sección B.
+        /// Clasifica: FISM* => fismdf; estatal => estatal; municipal => municipal; otras federales => otraFederal
+        /// </summary>
         [HttpGet]
-        [Route("GetDatosInicio/{idAcciones}")]
-        public IHttpActionResult GetDatosInicio(long idAcciones)
+        [Route("GetMontosFuentes/{idAcciones}")]
+        public IHttpActionResult GetMontosFuentes(long idAcciones)
         {
+            decimal fismdf = 0, otraFederal = 0, estatal = 0, municipal = 0, otros = 0;
+
             using (var conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 var cmd = new SqlCommand(@"
-                    SELECT * FROM TBLP_cedulaseguimiento 
+                    SELECT F.PRF_Nombre, ISNULL(I.FI_Inversion, 0) AS monto
+                    FROM TBLD_Financiamientoinversion I
+                    INNER JOIN TblC_FuenteFinanciamiento F ON I.IDProgramafinanciamiento = F.IDFuenteFinanciamiento
+                    WHERE I.IDAcciones = @idAcciones", conn);
+                cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string nombre = reader["PRF_Nombre"].ToString().ToUpper().Trim();
+                        decimal monto = Convert.ToDecimal(reader["monto"]);
+
+                        if (nombre.StartsWith("FISM"))
+                            fismdf += monto;
+                        else if (nombre.Contains("ESTATAL"))
+                            estatal += monto;
+                        else if (nombre.Contains("MUNICIPAL"))
+                            municipal += monto;
+                        else if (nombre.Contains("FEDERAL"))
+                            otraFederal += monto;
+                        else
+                            otros += monto;
+                    }
+                }
+            }
+
+            return Ok(new { fismdf, otraFederal, estatal, municipal, otros });
+        }
+
+        [HttpGet]
+        [Route("GetDatosInicio/{idAcciones}")]
+        public IHttpActionResult GetDatosInicio(long idAcciones)
+        {
+            // Verificar columnas nuevas (backward compat)
+            var colsExistentes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var connCheck = new SqlConnection(connectionString))
+            {
+                connCheck.Open();
+                var cmdCheck = new SqlCommand(@"
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = 'TBLP_cedulaseguimiento'
+                    AND COLUMN_NAME IN ('latitud_croquis','longuitud_croquis',
+                        'latitud_foto1','longuitud_foto1','latitud_foto2','longuitud_foto2',
+                        'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4',
+                        'supervisor')", connCheck);
+                using (var r = cmdCheck.ExecuteReader())
+                    while (r.Read()) colsExistentes.Add(r.GetString(0).ToLower());
+            }
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                var cmd = new SqlCommand(@"
+                    SELECT * FROM TBLP_cedulaseguimiento
                     WHERE IDAcciones = @idAcciones AND tipo_seguimiento = 'I'", conn);
                 cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
+
+                string SafeStr(System.Data.IDataReader rd, string col) =>
+                    colsExistentes.Contains(col) ? rd[col]?.ToString() ?? "" : "";
 
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -471,7 +578,19 @@ namespace Ceduver.Controllers
                             foto1 = reader["foto1"].ToString(),
                             foto2 = reader["foto2"].ToString(),
                             foto3 = reader["foto3"].ToString(),
-                            foto4 = reader["foto4"].ToString()
+                            foto4 = reader["foto4"].ToString(),
+                            // Nuevos campos (backward compat)
+                            supervisor = SafeStr(reader, "supervisor"),
+                            latitudCroquis = SafeStr(reader, "latitud_croquis"),
+                            longuitudCroquis = SafeStr(reader, "longuitud_croquis"),
+                            latitudFoto1 = SafeStr(reader, "latitud_foto1"),
+                            longuitudFoto1 = SafeStr(reader, "longuitud_foto1"),
+                            latitudFoto2 = SafeStr(reader, "latitud_foto2"),
+                            longuitudFoto2 = SafeStr(reader, "longuitud_foto2"),
+                            latitudFoto3 = SafeStr(reader, "latitud_foto3"),
+                            longuitudFoto3 = SafeStr(reader, "longuitud_foto3"),
+                            latitudFoto4 = SafeStr(reader, "latitud_foto4"),
+                            longuitudFoto4 = SafeStr(reader, "longuitud_foto4")
                         });
                     }
                 }
@@ -501,9 +620,27 @@ namespace Ceduver.Controllers
                     conn.Open();
                     long idSeguimiento = 0;
 
+                    // Verificar columnas nuevas para INSERT/UPDATE dinámico
+                    var colsNuevas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var cmdColCheck = new SqlCommand(@"
+                        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_NAME = 'TBLP_cedulaseguimiento'
+                        AND COLUMN_NAME IN ('supervisor','latitud_croquis','longuitud_croquis',
+                            'latitud_foto1','longuitud_foto1','latitud_foto2','longuitud_foto2',
+                            'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4')", conn);
+                    using (var rc = cmdColCheck.ExecuteReader())
+                        while (rc.Read()) colsNuevas.Add(rc.GetString(0).ToLower());
+
                     if (accionMov == "A")
                     {
-                        // INSERT
+                        // INSERT — agregar columnas nuevas si existen
+                        string extraCols = colsNuevas.Count > 0
+                            ? ", " + string.Join(", ", colsNuevas.Select(c => c))
+                            : "";
+                        string extraVals = colsNuevas.Count > 0
+                            ? ", " + string.Join(", ", colsNuevas.Select(c => "@" + ColToParam(c)))
+                            : "";
+
                         string sql = @"
                         INSERT INTO TBLP_cedulaseguimiento(
                             IDobraproyecto, IDAcciones, estado, municipio, localidad, clavelocalidad,
@@ -518,7 +655,7 @@ namespace Ceduver.Controllers
                             coincideplaneacionrubro, descripcionnocoinciderubro,
                             aportacionfismdf, otrafuentefederal, fuenteestatal, fuentemunicipal, otros, costototal,
                             latitud, longuitud, direccion, referencia,
-                            descripcionobra, tipo_seguimiento
+                            descripcionobra, tipo_seguimiento" + extraCols + @"
                         ) VALUES (
                             @idObraProyecto, @idAcciones, '07', '061', @localidad, @claveLocalidad,
                             @noAgeb, @fechaVerificacion,
@@ -532,16 +669,20 @@ namespace Ceduver.Controllers
                             @coincidePlaneacionRubro, @descripcionNoCoincideRubro,
                             @aportacionFismdf, @otraFuenteFederal, @fuenteEstatal, @fuenteMunicipal, @otros, @costoTotal,
                             @latitud, @longitud, @direccion, @referencia,
-                            @descripcionObra, 'I'
+                            @descripcionObra, 'I'" + extraVals + @"
                         );
                         SELECT CAST(SCOPE_IDENTITY() AS bigint);";
                         var cmd = new SqlCommand(sql, conn);
-                        AgregarParametrosInicio(cmd, httpRequest, idObraProyecto, idAcciones);
+                        AgregarParametrosInicio(cmd, httpRequest, idObraProyecto, idAcciones, colsNuevas);
                         idSeguimiento = Convert.ToInt64(cmd.ExecuteScalar());
                     }
                     else
                     {
-                        // UPDATE
+                        // UPDATE — agregar sets de columnas nuevas si existen
+                        string extraSets = colsNuevas.Count > 0
+                            ? ", " + string.Join(", ", colsNuevas.Select(c => c + " = @" + ColToParam(c)))
+                            : "";
+
                         string sql = @"
                         UPDATE TBLP_cedulaseguimiento SET
                             IDobraproyecto = @idObraProyecto,
@@ -582,11 +723,11 @@ namespace Ceduver.Controllers
                             longuitud = @longitud,
                             direccion = @direccion,
                             referencia = @referencia,
-                            descripcionobra = @descripcionObra
+                            descripcionobra = @descripcionObra" + extraSets + @"
                         WHERE IDAcciones = @idAcciones AND tipo_seguimiento = 'I'";
 
                         var cmd = new SqlCommand(sql, conn);
-                        AgregarParametrosInicio(cmd, httpRequest, idObraProyecto, idAcciones);
+                        AgregarParametrosInicio(cmd, httpRequest, idObraProyecto, idAcciones, colsNuevas);
                         cmd.ExecuteNonQuery();
 
                         // Obtener idSeguimiento
@@ -613,7 +754,44 @@ namespace Ceduver.Controllers
             }
         }
 
-        private void AgregarParametrosInicio(SqlCommand cmd, HttpRequest request, long idObraProyecto, long idAcciones)
+        // Convierte nombre de columna DB a nombre de parámetro (latitud_foto1 -> latitudFoto1)
+        private static string ColToParam(string col)
+        {
+            // Eliminar underscores y capitalizar la siguiente letra
+            var sb = new System.Text.StringBuilder();
+            bool nextUp = false;
+            foreach (char c in col)
+            {
+                if (c == '_') { nextUp = true; continue; }
+                sb.Append(nextUp ? char.ToUpper(c) : c);
+                nextUp = false;
+            }
+            return sb.ToString();
+        }
+
+        // Mapea columna DB a nombre del campo Form que envía el JS (latitud_croquis -> LatCroquis, etc.)
+        private static string ColToFormKey(string col)
+        {
+            // latitud_croquis -> LatCroquis | longuitud_croquis -> LonCroquis | supervisor -> Supervisor
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "supervisor",         "Supervisor" },
+                { "latitud_croquis",    "LatCroquis" },
+                { "longuitud_croquis",  "LonCroquis" },
+                { "latitud_foto1",      "LatFoto1" },
+                { "longuitud_foto1",    "LonFoto1" },
+                { "latitud_foto2",      "LatFoto2" },
+                { "longuitud_foto2",    "LonFoto2" },
+                { "latitud_foto3",      "LatFoto3" },
+                { "longuitud_foto3",    "LonFoto3" },
+                { "latitud_foto4",      "LatFoto4" },
+                { "longuitud_foto4",    "LonFoto4" }
+            };
+            return map.TryGetValue(col, out var v) ? v : col;
+        }
+
+        private void AgregarParametrosInicio(SqlCommand cmd, HttpRequest request, long idObraProyecto, long idAcciones,
+            HashSet<string> colsNuevas = null)
         {
             cmd.Parameters.AddWithValue("@idObraProyecto", idObraProyecto);
             cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
@@ -647,7 +825,7 @@ namespace Ceduver.Controllers
             cmd.Parameters.AddWithValue("@direccion", request.Form["Direccion"] ?? "");
             cmd.Parameters.AddWithValue("@referencia", request.Form["Referencia"] ?? "");
             cmd.Parameters.AddWithValue("@descripcionObra", request.Form["DescripcionObra"] ?? "");
-            
+
             cmd.Parameters.AddWithValue("@opcionRegular", request.Form["OpcionRegular"] == "true");
             cmd.Parameters.AddWithValue("@zonaAtencion", request.Form["ZonaAtencion"] == "true");
             cmd.Parameters.AddWithValue("@rezagoSocial", request.Form["RezagoSocial"] == "true");
@@ -656,10 +834,41 @@ namespace Ceduver.Controllers
             cmd.Parameters.AddWithValue("@descripcionNoCoincide", request.Form["DescripcionNoCoincide"] ?? "");
             cmd.Parameters.AddWithValue("@coincidePlaneacionRubro", request.Form["CoincidePlaneacionRubro"] == "true");
             cmd.Parameters.AddWithValue("@descripcionNoCoincideRubro", request.Form["DescripcionNoCoincideRubro"] ?? "");
+
+            // Columnas nuevas (backward compat)
+            if (colsNuevas != null)
+            {
+                foreach (var col in colsNuevas)
+                {
+                    var paramName = "@" + ColToParam(col);
+                    var formKey = ColToFormKey(col);
+                    cmd.Parameters.AddWithValue(paramName, (object)(request.Form[formKey] ?? "") ?? DBNull.Value);
+                }
+            }
         }
 
         private void GuardarFotoInicio(SqlConnection conn, HttpRequest request, string fileKey, string imgColumn, string pathColumn, long idSeguimiento, string ruta, string rutaFisica)
         {
+            // Columnas lat/lon correspondientes a este slot
+            var latCol = "latitud_" + pathColumn;    // e.g. latitud_croquis, latitud_foto1
+            var lonCol = "longuitud_" + pathColumn;  // e.g. longuitud_croquis, longuitud_foto1
+            // Keys en el Form del JS (e.g. LatCroquis, LonFoto1)
+            var slotName = char.ToUpper(fileKey[0]) + fileKey.Substring(1); // Croquis, Foto1 ...
+            var latFormKey = "Lat" + slotName;
+            var lonFormKey = "Lon" + slotName;
+            string latVal = request.Form[latFormKey] ?? "";
+            string lonVal = request.Form[lonFormKey] ?? "";
+
+            // Verificar si existen las columnas de coordenadas
+            bool tieneCoordsCol = false;
+            using (var cmdChk = new SqlCommand(@"
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'TBLP_cedulaseguimiento' AND COLUMN_NAME = @col", conn))
+            {
+                cmdChk.Parameters.AddWithValue("@col", latCol);
+                tieneCoordsCol = Convert.ToInt32(cmdChk.ExecuteScalar()) > 0;
+            }
+
             if (request.Files[fileKey] != null && request.Files[fileKey].ContentLength > 0)
             {
                 var file = request.Files[fileKey];
@@ -670,9 +879,29 @@ namespace Ceduver.Controllers
                 byte[] fileBytes = File.ReadAllBytes(filePath);
                 string rutaRelativa = ruta + fileName;
 
-                var cmd = new SqlCommand($"UPDATE TBLP_cedulaseguimiento SET {imgColumn} = @imagen, {pathColumn} = @ruta WHERE idseguimiento = @id", conn);
+                string coordsSql = tieneCoordsCol
+                    ? $", {latCol} = @latCoord, {lonCol} = @lonCoord"
+                    : "";
+
+                var cmd = new SqlCommand(
+                    $"UPDATE TBLP_cedulaseguimiento SET {imgColumn} = @imagen, {pathColumn} = @ruta{coordsSql} WHERE idseguimiento = @id", conn);
                 cmd.Parameters.Add(new SqlParameter("@imagen", SqlDbType.VarBinary) { Value = fileBytes });
                 cmd.Parameters.AddWithValue("@ruta", rutaRelativa);
+                cmd.Parameters.AddWithValue("@id", idSeguimiento);
+                if (tieneCoordsCol)
+                {
+                    cmd.Parameters.AddWithValue("@latCoord", latVal);
+                    cmd.Parameters.AddWithValue("@lonCoord", lonVal);
+                }
+                cmd.ExecuteNonQuery();
+            }
+            else if (tieneCoordsCol && (!string.IsNullOrEmpty(latVal) || !string.IsNullOrEmpty(lonVal)))
+            {
+                // Solo actualizar coords aunque no venga foto nueva
+                var cmd = new SqlCommand(
+                    $"UPDATE TBLP_cedulaseguimiento SET {latCol} = @latCoord, {lonCol} = @lonCoord WHERE idseguimiento = @id", conn);
+                cmd.Parameters.AddWithValue("@latCoord", latVal);
+                cmd.Parameters.AddWithValue("@lonCoord", lonVal);
                 cmd.Parameters.AddWithValue("@id", idSeguimiento);
                 cmd.ExecuteNonQuery();
             }
@@ -2394,6 +2623,366 @@ namespace Ceduver.Controllers
         }
 
 
+        #endregion
+
+        #region Ficha HTML Inicio
+        [HttpGet]
+        [Route("GenerarFichaInicio/{idAcciones}")]
+        [AllowAnonymous]
+        public HttpResponseMessage GenerarFichaInicio(long idAcciones)
+        {
+            try
+            {
+                // ── 1. Encabezado (obra, contrato, localidad, fuente, monto) ──
+                string nombreObra = "", numContrato = "", localidad = "",
+                       fuenteFinanciamiento = "", periodoInicio = "", periodoFin = "";
+                decimal montoContratado = 0;
+
+                // ── 2. Datos inicio (supervisor, fecha, fotos, coords) ──
+                string supervisor = "", fechaVerificacion = "";
+                string rutaCroquis = "", rutaFoto1 = "", rutaFoto2 = "", rutaFoto3 = "", rutaFoto4 = "";
+                string latCroquis = "", lonCroquis = "";
+                string latFoto1 = "", lonFoto1 = "";
+                string latFoto2 = "", lonFoto2 = "";
+                string latFoto3 = "", lonFoto3 = "";
+                string latFoto4 = "", lonFoto4 = "";
+                decimal aportacionFismdf = 0, otraFuenteFederal = 0, fuenteEstatal = 0, fuenteMunicipal = 0, otros = 0, costoTotal = 0;
+
+                string baseServerPath = HttpContext.Current.Server.MapPath("~/");
+                string baseUrl = HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Authority)
+                                 + HttpContext.Current.Request.ApplicationPath.TrimEnd('/') + "/";
+
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Encabezado
+                    string sqlEnc = @"
+                        SELECT P.OP_NombreObra, A.AC_Accion, C.CON_Contrato, C.CON_Montocontratado,
+                               A.LCL_Nombre,
+                               CONVERT(varchar,C.CON_Inicio,103) AS CON_Inicio,
+                               CONVERT(varchar,C.CON_Final,103)  AS CON_Final
+                        FROM TBLP_Obraproyecto P
+                        INNER JOIN TblD_Acciones A ON P.IDobraproyecto = A.IDobraproyecto
+                        INNER JOIN TBLD_Contrato C ON A.IDContrato = C.IDContrato
+                        WHERE A.IDAcciones = @id";
+                    using (var r = new SqlCommand(sqlEnc, conn) { Parameters = { new SqlParameter("@id", idAcciones) } }.ExecuteReader())
+                    {
+                        if (r.Read())
+                        {
+                            nombreObra      = r["OP_NombreObra"].ToString() + " (" + r["AC_Accion"].ToString() + ")";
+                            numContrato     = r["CON_Contrato"].ToString();
+                            localidad       = r["LCL_Nombre"].ToString();
+                            montoContratado = r["CON_Montocontratado"] != DBNull.Value ? Convert.ToDecimal(r["CON_Montocontratado"]) : 0;
+                            periodoInicio   = r["CON_Inicio"].ToString();
+                            periodoFin      = r["CON_Final"].ToString();
+                        }
+                    }
+
+                    // Fuente financiamiento (primera)
+                    var cmdF = new SqlCommand(@"
+                        SELECT TOP 1 F.PRF_Nombre
+                        FROM TBLD_Financiamientoinversion I
+                        INNER JOIN TblC_FuenteFinanciamiento F ON I.IDProgramafinanciamiento = F.IDFuenteFinanciamiento
+                        WHERE I.IDAcciones = @id", conn);
+                    cmdF.Parameters.AddWithValue("@id", idAcciones);
+                    var fRes = cmdF.ExecuteScalar();
+                    if (fRes != null) fuenteFinanciamiento = fRes.ToString();
+
+                    // Columnas nuevas backward-compat
+                    var colsOk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var cmdCols = new SqlCommand(@"
+                        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_NAME='TBLP_cedulaseguimiento'
+                        AND COLUMN_NAME IN ('supervisor','latitud_croquis','longuitud_croquis',
+                            'latitud_foto1','longuitud_foto1','latitud_foto2','longuitud_foto2',
+                            'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4')", conn);
+                    using (var rc = cmdCols.ExecuteReader())
+                        while (rc.Read()) colsOk.Add(rc.GetString(0).ToLower());
+
+                    string SafeS(System.Data.IDataReader rd, string col) =>
+                        colsOk.Contains(col) ? rd[col]?.ToString() ?? "" : "";
+
+                    // Datos inicio
+                    var cmdI = new SqlCommand(@"
+                        SELECT * FROM TBLP_cedulaseguimiento
+                        WHERE IDAcciones = @id AND tipo_seguimiento = 'I'", conn);
+                    cmdI.Parameters.AddWithValue("@id", idAcciones);
+                    using (var ri = cmdI.ExecuteReader())
+                    {
+                        if (ri.Read())
+                        {
+                            supervisor        = SafeS(ri, "supervisor");
+                            fechaVerificacion = ri["fechaverificacion"] != DBNull.Value
+                                               ? Convert.ToDateTime(ri["fechaverificacion"]).ToString("dd/MM/yyyy") : "";
+                            rutaCroquis = ri["croquis"].ToString();
+                            rutaFoto1   = ri["foto1"].ToString();
+                            rutaFoto2   = ri["foto2"].ToString();
+                            rutaFoto3   = ri["foto3"].ToString();
+                            rutaFoto4   = ri["foto4"].ToString();
+                            latCroquis  = SafeS(ri, "latitud_croquis");  lonCroquis = SafeS(ri, "longuitud_croquis");
+                            latFoto1    = SafeS(ri, "latitud_foto1");    lonFoto1   = SafeS(ri, "longuitud_foto1");
+                            latFoto2    = SafeS(ri, "latitud_foto2");    lonFoto2   = SafeS(ri, "longuitud_foto2");
+                            latFoto3    = SafeS(ri, "latitud_foto3");    lonFoto3   = SafeS(ri, "longuitud_foto3");
+                            latFoto4    = SafeS(ri, "latitud_foto4");    lonFoto4   = SafeS(ri, "longuitud_foto4");
+                            aportacionFismdf  = ri["aportacionfismdf"]  != DBNull.Value ? Convert.ToDecimal(ri["aportacionfismdf"])  : 0;
+                            otraFuenteFederal = ri["otrafuentefederal"] != DBNull.Value ? Convert.ToDecimal(ri["otrafuentefederal"]) : 0;
+                            fuenteEstatal     = ri["fuenteestatal"]     != DBNull.Value ? Convert.ToDecimal(ri["fuenteestatal"])     : 0;
+                            fuenteMunicipal   = ri["fuentemunicipal"]   != DBNull.Value ? Convert.ToDecimal(ri["fuentemunicipal"])   : 0;
+                            otros             = ri["otros"]             != DBNull.Value ? Convert.ToDecimal(ri["otros"])             : 0;
+                            costoTotal        = ri["costototal"]        != DBNull.Value ? Convert.ToDecimal(ri["costototal"])        : 0;
+                        }
+                    }
+                }
+
+                // ── 3. Convertir rutas físicas a URLs ──
+                Func<string, string> toUrl = (ruta) =>
+                {
+                    if (string.IsNullOrEmpty(ruta)) return "";
+                    // Si ya es URL absoluta, regrésala tal cual
+                    if (ruta.StartsWith("http")) return ruta;
+                    // Si es ruta relativa tipo "Uploads/Seguimiento/archivo.jpg"
+                    return baseUrl + ruta.Replace("\\", "/").TrimStart('/');
+                };
+
+                // ── 4. Helper para tarjeta de foto (solo si hay ruta Y archivo existe físicamente) ──
+                Func<string, string, string, string, string> fotoCard = (titulo, ruta, lat, lon) =>
+                {
+                    if (string.IsNullOrEmpty(ruta)) return "";
+                    // Verificar que el archivo realmente existe en disco
+                    string physPath = HttpContext.Current.Server.MapPath("~/" + ruta.TrimStart('/').Replace("/", "\\"));
+                    if (!System.IO.File.Exists(physPath)) return "";
+                    string url = toUrl(ruta);
+                    string coords = (!string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
+                        ? $"<div class='foto-coords'><b>Lat:</b> {lat}&nbsp;&nbsp;<b>Lon:</b> {lon}</div>"
+                        : "";
+                    return $@"
+                    <div class='foto-bloque'>
+                      <img class='foto' src='{url}' alt='{titulo}'>
+                      <div class='foto-caption'>
+                        <div class='foto-titulo'>{titulo}</div>
+                        {coords}
+                      </div>
+                    </div>";
+                };
+
+                string fotosHtml =
+                    fotoCard("Croquis",       rutaCroquis, latCroquis, lonCroquis) +
+                    fotoCard("Fotografía 1",  rutaFoto1,   latFoto1,   lonFoto1)   +
+                    fotoCard("Fotografía 2",  rutaFoto2,   latFoto2,   lonFoto2)   +
+                    fotoCard("Fotografía 3",  rutaFoto3,   latFoto3,   lonFoto3)   +
+                    fotoCard("Fotografía 4",  rutaFoto4,   latFoto4,   lonFoto4);
+
+                var culturesMX = new CultureInfo("es-MX");
+                string montoFmt = montoContratado.ToString("C", culturesMX);
+                string costoFmt = costoTotal.ToString("C", culturesMX);
+
+                // ── 5. HTML ──
+                string html = $@"<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Cédula de Verificación de Inicio</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  html, body {{ width: 100%; }}
+  body {{ font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; }}
+
+  /* ══ BARRAS de color ══ */
+  .hdr-bar  {{ background: #c0392b; height: 8px; width: 100%; display: block; }}
+  .hdr-gold {{ background: #d4ac0d; height: 4px; width: 100%; display: block; }}
+
+  /* ══ ENCABEZADO ══ */
+  .hdr-fixed {{ width: 100%; }}
+  .hdr-inner {{ display: flex; align-items: center; justify-content: space-between;
+                padding: 8px 20px; background: #fff; }}
+  .hdr-logo img {{ height: 70px; width: auto; }}
+  .hdr-center {{ text-align: center; flex: 1; padding: 0 16px; }}
+  .hdr-center .h-titulo {{
+    font-size: 13px; font-weight: bold; color: #c0392b;
+    text-transform: uppercase; line-height: 1.5;
+  }}
+  .hdr-center .h-sub {{
+    font-size: 11px; color: #444; margin-top: 3px;
+  }}
+
+  /* ══ PIE DE PÁGINA ══ */
+  .footer-fixed {{ width: 100%; }}
+  .footer-text {{
+    text-align: center; font-size: 10px; color: #555;
+    padding: 5px 0; background: #fff;
+  }}
+
+  /* ══ Cuerpo del documento ══ */
+  .page {{ max-width: 820px; margin: 0 auto; padding: 0 24px 24px; }}
+
+  /* Título central */
+  .cedula-titulo {{
+    text-align: center; letter-spacing: 2px; font-size: 13px;
+    color: #555; font-weight: bold; text-transform: uppercase;
+    margin: 18px 0 14px;
+  }}
+
+  /* Tabla de datos */
+  table.ficha {{ width: 100%; border-collapse: collapse; margin-bottom: 14px; }}
+  table.ficha td {{
+    border: 1px solid #bbb; padding: 6px 10px; vertical-align: top;
+    font-size: 12px;
+  }}
+  table.ficha td.lbl {{
+    font-weight: bold; width: 32%; background: #fff;
+    white-space: nowrap;
+  }}
+
+  /* Texto visita */
+  .texto-visita {{
+    border: 1px solid #bbb; padding: 10px 14px;
+    margin-bottom: 16px; font-size: 12px; line-height: 1.7;
+  }}
+
+  /* Sección fotos */
+  .sec-fotos {{
+    border-left: 4px solid #c0392b;
+    padding-left: 8px; margin-bottom: 14px;
+    font-weight: bold; font-size: 12px;
+  }}
+
+  /* Cada foto: wrapper centrado */
+  .foto-bloque {{
+    margin: 0 auto 28px auto;
+    page-break-inside: avoid;
+    width: fit-content;
+    max-width: 100%;
+  }}
+  .foto-bloque img.foto {{
+    max-width: 500px;
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border: 1px solid #999;
+    border-bottom: none;
+    display: block;
+  }}
+  /* Pie de foto pegado exactamente debajo de la imagen */
+  .foto-caption {{
+    max-width: 500px;
+    width: 100%;
+    background: #f0f0f0;
+    border: 1px solid #999;
+    padding: 5px 10px;
+    font-size: 11px;
+    box-sizing: border-box;
+  }}
+  .foto-caption .foto-titulo {{
+    font-weight: bold; font-size: 12px; color: #c0392b;
+  }}
+  .foto-caption .foto-coords {{
+    color: #444; margin-top: 2px;
+  }}
+
+  /* Botón no imprime */
+  .no-print {{ text-align: right; padding: 10px 24px 0; }}
+  .no-print button {{
+    background: #c0392b; color: #fff; border: none;
+    padding: 6px 18px; border-radius: 4px;
+    cursor: pointer; font-size: 13px;
+  }}
+
+  /* ══ PRINT ══ */
+  @media print {{
+    .no-print {{ display: none !important; }}
+    html, body {{ margin: 0; padding: 0;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    .foto-bloque {{ page-break-inside: avoid; }}
+  }}
+</style>
+</head>
+<body>
+
+<!-- Botón imprimir (solo pantalla) -->
+<div class='no-print'>
+  <button onclick='window.print()'>&#128424; Imprimir</button>
+</div>
+
+<!-- ═══ ENCABEZADO ═══ -->
+<div class='hdr-fixed'>
+  <div class='hdr-bar'></div>
+  <div class='hdr-gold'></div>
+  <div class='hdr-inner'>
+    <div class='hdr-logo'>
+      <img src='{baseUrl}assets/media/logo_chilon.png' alt='Logo'
+           onerror=""this.style.visibility='hidden'"">
+    </div>
+    <div class='hdr-center'>
+      <div class='h-titulo'>H. Ayuntamiento Municipal de Chilón, Chiapas<br>2024 – 2027</div>
+      <div class='h-sub'>Dirección de Obras Públicas y Desarrollo Urbano</div>
+    </div>
+    <div class='hdr-logo'>
+      <img src='{baseUrl}assets/media/escudo.png' alt='Escudo'
+           onerror=""this.style.visibility='hidden'"">
+    </div>
+  </div>
+  <div class='hdr-gold'></div>
+  <div class='hdr-bar'></div>
+</div>
+
+<!-- ═══ CUERPO ═══ -->
+<div class='page'>
+
+  <div class='cedula-titulo'>Cédula de Verificación de Inicio</div>
+
+  <table class='ficha'>
+    <tr><td class='lbl'>Contrato:</td><td>{numContrato}</td></tr>
+    <tr><td class='lbl'>Monto Contratado:</td><td>{montoFmt}</td></tr>
+    <tr><td class='lbl'>Fuente de Financiamiento:</td><td>{fuenteFinanciamiento}</td></tr>
+    <tr><td class='lbl'>Inversión Total:</td><td>{costoFmt}</td></tr>
+    <tr><td class='lbl'>Obra:</td><td>{nombreObra}</td></tr>
+    <tr><td class='lbl'>Localidad:</td><td>{localidad}</td></tr>
+    <tr><td class='lbl'>Supervisor de Obras:</td><td>{supervisor}</td></tr>
+    <tr><td class='lbl'>Fecha de Verificación:</td><td>{fechaVerificacion}</td></tr>
+  </table>
+
+  <div class='texto-visita'>
+    SE REALIZA LA VISITA A LA LOCALIDAD EN COMPAÑÍA DE PATRONATO DE OBRA PARA SUPERVISAR
+    LOS AVANCES DE LA OBRA:
+  </div>
+
+  <div class='sec-fotos'>Evidencia Fotográfica</div>
+
+  {fotosHtml}
+
+</div>
+
+<!-- ═══ PIE DE PÁGINA ═══ -->
+<div class='footer-fixed'>
+  <div class='hdr-bar'></div>
+  <div class='hdr-gold'></div>
+  <div class='footer-text'>
+    PALACIO MUNICIPAL S/N. COL. CENTRO, CHILÓN, CHIAPAS. C.P. 29940 / TEL: (919) 67 101 15
+  </div>
+  <div class='hdr-gold'></div>
+  <div class='hdr-bar'></div>
+</div>
+
+</body>
+</html>";
+
+                var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(html, System.Text.Encoding.UTF8, "text/html")
+                };
+                return response;
+            }
+            catch (Exception ex)
+            {
+                var err = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("Error: " + ex.Message)
+                };
+                return err;
+            }
+        }
         #endregion
     }
 }

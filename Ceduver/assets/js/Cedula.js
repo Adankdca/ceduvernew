@@ -335,6 +335,10 @@ var CedulaModule = function () {
     // ======================== CARGAR FOTOS ========================
     var cargarFotos = function (idAcciones) {
 
+        $('#containerFotosGeo').html(
+            '<div class="col-12 text-center py-3"><i class="fas fa-spinner fa-spin text-primary"></i> Cargando fotos...</div>'
+        );
+
         $.get(baseUrl + 'GetFotosGeoreferencia/' + idAcciones, function (data) {
 
             let html = '';
@@ -343,32 +347,59 @@ var CedulaModule = function () {
 
                 $.each(data, function (i, foto) {
 
+                    // Badge de coordenadas
+                    var coordHtml = '';
+                    if (foto.latitud || foto.longitud) {
+                        coordHtml = `
+                            <div class="mt-1 px-1">
+                                <span class="badge badge-pill badge-light-warning text-dark" style="font-size:10px;">
+                                    <i class="fas fa-map-marker-alt text-warning mr-1"></i>
+                                    ${foto.latitud || '—'}, ${foto.longitud || '—'}
+                                </span>
+                            </div>`;
+                    } else {
+                        coordHtml = `
+                            <div class="mt-1 px-1">
+                                <span class="badge badge-pill badge-light text-muted" style="font-size:10px;">
+                                    <i class="fas fa-map-marker-alt mr-1"></i> Sin coordenadas
+                                </span>
+                            </div>`;
+                    }
+
                     html += `
-                    <div class="col-md-3 mb-3 text-center">
-                        <small>#${foto.idFoto}</small>
-                        <img src="${foto.ruta}" 
-                             class="img-fluid border mb-2" 
-                             style="max-height:150px; cursor:pointer"
-                             onclick="window.open('${foto.ruta}','_blank')">
-                        <small>${foto.fechaAlta}</small>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-success"
-                                onclick="CedulaModule.descargarFoto('${foto.ruta}',event)">
-                                <i class="fas fa-download"></i>
-                            </button>
-
-                            <button type="button" class="btn btn-sm btn-danger"
-                                onclick="CedulaModule.eliminarFoto(${foto.idFoto})">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                    <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header py-1 px-2 bg-light d-flex justify-content-between align-items-center">
+                                <small class="text-muted font-weight-bold">#${i + 1}</small>
+                                <small class="text-muted">${foto.fechaAlta}</small>
+                            </div>
+                            <div class="card-body p-2 text-center">
+                                <img src="${foto.ruta}"
+                                     class="rounded img-fluid mb-1"
+                                     style="max-height:130px; width:100%; object-fit:cover; cursor:pointer;"
+                                     onclick="window.open('${foto.ruta}','_blank')"
+                                     title="Clic para ver en tamaño completo">
+                                ${coordHtml}
+                            </div>
+                            <div class="card-footer p-1 text-center bg-white">
+                                <button type="button" class="btn btn-xs btn-light-primary mr-1"
+                                    onclick="CedulaModule.descargarFoto('${foto.ruta}',event)" title="Descargar">
+                                    <i class="fas fa-download fa-sm"></i>
+                                </button>
+                                <button type="button" class="btn btn-xs btn-light-danger"
+                                    onclick="CedulaModule.eliminarFoto(${foto.idFoto})" title="Eliminar">
+                                    <i class="fas fa-trash fa-sm"></i>
+                                </button>
+                            </div>
                         </div>
-
-                    </div>
-                    `;
+                    </div>`;
                 });
 
             } else {
-                html = `<div class="col-12 text-center text-muted">No hay fotos</div>`;
+                html = `<div class="col-12 text-center py-4 text-muted">
+                            <i class="fas fa-images fa-2x mb-2 d-block"></i>
+                            No hay fotos registradas aún
+                        </div>`;
             }
 
             $('#containerFotosGeo').html(html);
@@ -381,15 +412,23 @@ var CedulaModule = function () {
         var fileInput = $('#fileFotoGeo')[0];
 
         if (fileInput.files.length === 0) {
-            Swal.fire('Aviso', 'Selecciona una imagen', 'warning');
+            Swal.fire('Aviso', 'Selecciona una imagen antes de subir', 'warning');
             return;
         }
+
+        var latitud  = $('#txtLatFotoGeo').val().trim();
+        var longitud = $('#txtLonFotoGeo').val().trim();
 
         var formData = new FormData();
         formData.append("file", fileInput.files[0]);
         formData.append("idAcciones", currentIdAcciones);
-        formData.append("idObra", currentIdObra);        // 🔥 IMPORTANTE
-        formData.append("contrato", currentContrato);    // 🔥 IMPORTANTE
+        formData.append("idObra", currentIdObra);
+        formData.append("contrato", currentContrato);
+        formData.append("latitud", latitud);
+        formData.append("longitud", longitud);
+
+        var $btn = $('#btnAgregarFotoGeo');
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Subiendo...');
 
         $.ajax({
             url: baseUrl + 'SubirFotoGeoreferencia',
@@ -398,16 +437,59 @@ var CedulaModule = function () {
             contentType: false,
             processData: false,
             success: function () {
-
-                Swal.fire('Éxito', 'Foto subida correctamente', 'success');
-
+                Swal.fire({ icon: 'success', title: 'Foto subida', text: 'La foto se guardó correctamente', timer: 1500, showConfirmButton: false });
                 cargarFotos(currentIdAcciones);
-
+                // Limpiar campos
                 $('#fileFotoGeo').val('');
+                $('.custom-file-label[for="fileFotoGeo"]').text('Elegir imagen...');
+                $('#txtLatFotoGeo').val('');
+                $('#txtLonFotoGeo').val('');
+                $('#imgPreviewFotoGeo').attr('src', '').hide();
+                $('#previewFotoGeo').hide();
+                $('#placeholderPreviewGeo').show();
             },
             error: function () {
                 Swal.fire('Error', 'No se pudo subir la foto', 'error');
+            },
+            complete: function () {
+                $btn.prop('disabled', false).html('<i class="fas fa-upload mr-1"></i> Subir Foto');
             }
+        });
+    };
+
+    // ======================== CAPTURAR GPS ========================
+    var initCapturarGPS = function () {
+        $('#btnCapturarGPSGeo').off('click').on('click', function () {
+            var $btn = $(this);
+            var $status = $('#statusGPSGeo');
+
+            if (!navigator.geolocation) {
+                Swal.fire('No disponible', 'Tu navegador no soporta geolocalización', 'warning');
+                return;
+            }
+
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Obteniendo...');
+            $status.text('Solicitando ubicación...').show();
+
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    var lat = pos.coords.latitude.toFixed(6);
+                    var lon = pos.coords.longitude.toFixed(6);
+                    $('#txtLatFotoGeo').val(lat);
+                    $('#txtLonFotoGeo').val(lon);
+                    $status.html('<i class="fas fa-check-circle text-success mr-1"></i> Ubicación capturada').show();
+                    $btn.prop('disabled', false).html('<i class="fas fa-crosshairs mr-1"></i> Obtener GPS');
+                },
+                function (err) {
+                    var msg = 'No se pudo obtener la ubicación';
+                    if (err.code === 1) msg = 'Permiso denegado por el usuario';
+                    else if (err.code === 2) msg = 'Ubicación no disponible';
+                    else if (err.code === 3) msg = 'Tiempo de espera agotado';
+                    $status.html('<i class="fas fa-exclamation-circle text-danger mr-1"></i> ' + msg).show();
+                    $btn.prop('disabled', false).html('<i class="fas fa-crosshairs mr-1"></i> Obtener GPS');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         });
     };
     
@@ -460,12 +542,49 @@ var CedulaModule = function () {
         $('#btnAgregarFotoGeo').off('click').on('click', function () {
             subirFoto();
         });
+
+        // Preview de imagen al seleccionar archivo
+        $('#fileFotoGeo').off('change').on('change', function () {
+            var file = this.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#imgPreviewFotoGeo').attr('src', e.target.result).show();
+                    $('#previewFotoGeo').show();
+                    $('#placeholderPreviewGeo').hide();
+                };
+                reader.readAsDataURL(file);
+                // Actualizar etiqueta custom-file
+                $('.custom-file-label[for="fileFotoGeo"]').text(file.name);
+                // Limpiar status GPS al cambiar foto
+                $('#statusGPSGeo').hide();
+            }
+        });
+
+        // Botón GPS
+        initCapturarGPS();
     };
 
 
     //======================================================================
     // ======================== DATOS INICIO ===============================
     //======================================================================
+    // Precarga los montos de Sección B desde las fuentes de financiamiento registradas
+    var precargarMontosFuentes = function (idAcciones) {
+        $.get(baseUrl + 'GetMontosFuentes/' + idAcciones, function (f) {
+            if (!f) return;
+            var fmt = function(v) { return parseFloat(v || 0).toFixed(2); };
+            $('#txtAportacionFismdfInicio').val(fmt(f.fismdf));
+            $('#txtOtraFuenteFederalInicio').val(fmt(f.otraFederal));
+            $('#txtFuenteEstatalInicio').val(fmt(f.estatal));
+            $('#txtFuenteMunicipalInicio').val(fmt(f.municipal));
+            $('#txtOtrosInicio').val(fmt(f.otros));
+            // Calcular costo total
+            var total = (f.fismdf||0) + (f.otraFederal||0) + (f.estatal||0) + (f.municipal||0) + (f.otros||0);
+            $('#txtCostoTotalInicio').val(total.toFixed(2));
+        });
+    };
+
     var abrirDatosInicio = function (idAcciones) {
         limpiarFormularioInicio();
         $('#hddIdAccionInicio').val(idAcciones);
@@ -494,6 +613,9 @@ var CedulaModule = function () {
         // Cargar datos existentes si los hay
         $.get(baseUrl + 'GetDatosInicio/' + idAcciones, function (data) {
             if (data && data.idSeguimiento) {
+                // Datos existentes — precargar montos solo si todos están en 0
+                var todosEnCero = !data.aportacionFismdf && !data.otraFuenteFederal &&
+                                  !data.fuenteEstatal && !data.fuenteMunicipal && !data.costoTotal;
                 $('#hddIdSeguimientoInicio').val(data.idSeguimiento);
                 $('#hddAccionMovInicio').val('M');
                 $('#txtNoAgebInicio').val(data.noAgeb);
@@ -536,25 +658,36 @@ var CedulaModule = function () {
                 //if (data.foto2) $('#imgFoto2Inicio').attr('src', data.foto2).show();
                 //if (data.foto3) $('#imgFoto3Inicio').attr('src', data.foto3).show();
                 //if (data.foto4) $('#imgFoto4Inicio').attr('src', data.foto4).show();
-                // Mostrar fotos existentes con botones descargar/eliminar
+                // Supervisor
+                $('#txtSupervisorInicio').val(data.supervisor || '');
+
+                // Mostrar fotos existentes con botones descargar/eliminar + coords
                 var fotosInicio = {
-                    'croquis': data.croquis,
-                    '1': data.foto1,
-                    '2': data.foto2,
-                    '3': data.foto3,
-                    '4': data.foto4
+                    'croquis': { ruta: data.croquis, lat: data.latitudCroquis, lon: data.longuitudCroquis },
+                    '1': { ruta: data.foto1, lat: data.latitudFoto1, lon: data.longuitudFoto1 },
+                    '2': { ruta: data.foto2, lat: data.latitudFoto2, lon: data.longuitudFoto2 },
+                    '3': { ruta: data.foto3, lat: data.latitudFoto3, lon: data.longuitudFoto3 },
+                    '4': { ruta: data.foto4, lat: data.latitudFoto4, lon: data.longuitudFoto4 }
                 };
-                $.each(fotosInicio, function (key, ruta) {
-                    if (ruta) {
-                        var sufijo = key === 'croquis' ? 'Croquis' : 'Foto' + key;
-                        $('#img' + sufijo + 'Inicio').attr('src', ruta).show();
+                $.each(fotosInicio, function (key, info) {
+                    var sufijo = key === 'croquis' ? 'Croquis' : 'Foto' + key;
+                    if (info.ruta) {
+                        $('#img' + sufijo + 'Inicio').attr('src', info.ruta).show();
                         $('#placeholder' + sufijo + 'Inicio').hide();
                         $('#acciones' + sufijo + 'Inicio').show();
-                        $('#hddRuta' + sufijo + 'Inicio').val(ruta);
+                        $('#hddRuta' + sufijo + 'Inicio').val(info.ruta);
                     }
+                    $('#txtLat' + sufijo + 'Inicio').val(info.lat || '');
+                    $('#txtLon' + sufijo + 'Inicio').val(info.lon || '');
                 });
+                // Si todos los montos son 0, intentar precargar desde fuentes
+                if (todosEnCero) {
+                    precargarMontosFuentes(idAcciones);
+                }
             } else {
                 $('#hddAccionMovInicio').val('A');
+                // Registro nuevo: precargar montos desde fuentes de financiamiento
+                precargarMontosFuentes(idAcciones);
             }
         });
 
@@ -565,6 +698,7 @@ var CedulaModule = function () {
         $('#txtNoAgebInicio, #txtFechaVerificacionInicio, #txtDescripcionNoCoincideInicio').val('');
         $('#txtDescripcionNoCoincideRubroInicio, #txtLatitudInicio, #txtLongitudInicio').val('');
         $('#txtDireccionInicio, #txtReferenciaInicio').val('');
+        $('#txtSupervisorInicio').val('');
         $('#txtAportacionFismdfInicio, #txtOtraFuenteFederalInicio, #txtFuenteEstatalInicio').val('0.00');
         $('#txtFuenteMunicipalInicio, #txtOtrosInicio, #txtCostoTotalInicio').val('0.00');
         $('#chkAmpliaInicio, #chkConstruccionInicio, #chkEquipamientoInicio,\
@@ -574,7 +708,7 @@ var CedulaModule = function () {
         $('#cboCoincidePlaneacionInicio').val('true');
         $('#cboCoincidePlaneacionRubroInicio').val('true');
 
-        // Limpiar fotos y placeholders
+        // Limpiar fotos, placeholders y coordenadas por slot
         var sufijos = ['Croquis', 'Foto1', 'Foto2', 'Foto3', 'Foto4'];
         $.each(sufijos, function (i, s) {
             $('#img' + s + 'Inicio').hide().attr('src', '');
@@ -582,6 +716,8 @@ var CedulaModule = function () {
             $('#acciones' + s + 'Inicio').hide();
             $('#file' + s + 'Inicio').val('');
             $('#hddRuta' + s + 'Inicio').val('');
+            $('#txtLat' + s + 'Inicio').val('');
+            $('#txtLon' + s + 'Inicio').val('');
         });
 
         $('#hddAccionMovInicio').val('A');
@@ -686,6 +822,19 @@ var CedulaModule = function () {
         formData.append('DescripcionNoCoincide', $('#txtDescripcionNoCoincideInicio').val());
         formData.append('CoincidePlaneacionRubro', $('#cboCoincidePlaneacionRubroInicio').val());
         formData.append('DescripcionNoCoincideRubro', $('#txtDescripcionNoCoincideRubroInicio').val());
+        formData.append('Supervisor', $('#txtSupervisorInicio').val());
+
+        // Coordenadas por slot de foto
+        formData.append('LatCroquis', $('#txtLatCroquisInicio').val());
+        formData.append('LonCroquis', $('#txtLonCroquisInicio').val());
+        formData.append('LatFoto1', $('#txtLatFoto1Inicio').val());
+        formData.append('LonFoto1', $('#txtLonFoto1Inicio').val());
+        formData.append('LatFoto2', $('#txtLatFoto2Inicio').val());
+        formData.append('LonFoto2', $('#txtLonFoto2Inicio').val());
+        formData.append('LatFoto3', $('#txtLatFoto3Inicio').val());
+        formData.append('LonFoto3', $('#txtLonFoto3Inicio').val());
+        formData.append('LatFoto4', $('#txtLatFoto4Inicio').val());
+        formData.append('LonFoto4', $('#txtLonFoto4Inicio').val());
 
         // Archivos
         var fileCroquis = $('#fileCroquisInicio')[0].files[0];
@@ -700,11 +849,8 @@ var CedulaModule = function () {
         if (fileFoto3) formData.append('Foto3', fileFoto3);
         if (fileFoto4) formData.append('Foto4', fileFoto4);
 
-        if (!$('#txtFechaVerificacionInicio').val()) {
-            Swal.fire('Validación', 'La fecha es obligatoria', 'warning');
-            return;
-        }
-        $.ajax({
+        var doGuardar = function() {
+            $.ajax({
             url: baseUrl + 'GuardarDatosInicio',
             type: 'POST',
             data: formData,
@@ -727,7 +873,22 @@ var CedulaModule = function () {
                 Swal.fire('Error', xhr.responseText || 'Error en el servidor', 'error');
             }
         });
-        
+        }; // fin doGuardar
+
+        if (!$('#txtFechaVerificacionInicio').val()) {
+            Swal.fire({
+                title: 'Fecha vacía',
+                text: 'No has capturado la fecha de verificación. ¿Deseas guardar de todas formas?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (result.isConfirmed) doGuardar();
+            });
+        } else {
+            doGuardar();
+        }
     };
     //======================================================================
     // ======================== SEGUIMIENTO ================================
@@ -1961,12 +2122,7 @@ var CedulaModule = function () {
     var imprimirInicio = function (idAcciones) {
         $.get(baseUrl + 'GetIdSeguimientoInicio/' + idAcciones, function (data) {
             if (data && data.idSeguimiento) {
-                var url = 'Reportes/CRNET.aspx?reporte=Reporteinicio'
-                    + '&p0=' + idAcciones
-                    + '&p1=' + data.idSeguimiento
-                    + '&p2=' + idAcciones
-                    + '&p3=' + data.idSeguimiento;
-                window.open(url, '_blank');
+                window.open(baseUrl + 'GenerarFichaInicio/' + idAcciones, '_blank');
             } else {
                 Swal.fire('Aviso', 'Favor de complementar los datos de la cédula para imprimir.', 'warning');
             }
@@ -2129,6 +2285,39 @@ var CedulaModule = function () {
     var exportarExcelFiniquito = function (idAcciones) {
         window.location.href = baseUrl + 'ExportarExcelFiniquito/' + idAcciones;
     };
+
+    /**
+     * Captura GPS para un slot de foto de Inicio.
+     * @param {string} sufijo - 'Croquis', 'Foto1', 'Foto2', 'Foto3', 'Foto4'
+     */
+    var capturarGPSFotoInicio = function (sufijo) {
+        if (!navigator.geolocation) {
+            Swal.fire('Aviso', 'Tu navegador no soporta geolocalización.', 'warning');
+            return;
+        }
+        Swal.fire({
+            title: 'Obteniendo GPS...',
+            text: 'Por favor espera.',
+            allowOutsideClick: false,
+            didOpen: function () { Swal.showLoading(); }
+        });
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                Swal.close();
+                var lat = pos.coords.latitude.toFixed(6);
+                var lon = pos.coords.longitude.toFixed(6);
+                $('#txtLat' + sufijo + 'Inicio').val(lat);
+                $('#txtLon' + sufijo + 'Inicio').val(lon);
+                Swal.fire({ icon: 'success', title: 'Ubicación capturada', text: lat + ', ' + lon, timer: 2000, showConfirmButton: false });
+            },
+            function (err) {
+                Swal.close();
+                Swal.fire('Error GPS', 'No se pudo obtener la ubicación: ' + err.message, 'error');
+            },
+            { enableHighAccuracy: true, timeout: 15000 }
+        );
+    };
+
     //======================================================================
     // ======================== RETURN =====================================
     //======================================================================
@@ -2159,6 +2348,7 @@ var CedulaModule = function () {
         eliminarSeguimiento: eliminarSeguimiento,
         descargarFotoInicio: descargarFotoInicio,
         eliminarFotoInicio: eliminarFotoInicio,
+        capturarGPSFotoInicio: capturarGPSFotoInicio,
         descargarFotoSeg: descargarFotoSeg,
         eliminarFotoSeg: eliminarFotoSeg,
 

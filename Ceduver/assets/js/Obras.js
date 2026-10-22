@@ -307,6 +307,10 @@ const ObrasModule = (function () {
 
         idObra = 0; // ✅ MODO AGREGAR
 
+        // LIMPIAR PANEL DE IMPORTACIÓN
+        limpiarPanelImportacion();
+        $('#panelImportSeguimiento').show();
+
         // LIMPIAR CAMPOS
         //$('#txtNoObra').val('');
         //$('#txtNombreObra').val('');
@@ -329,12 +333,21 @@ const ObrasModule = (function () {
 
         // ABRIR MODAL
         $('#modalObra').modal('show');
+
+        // AUTO-CARGAR las 40 obras más recientes al abrir
+        setTimeout(function () {
+            buscarObrasSeguimiento(true);
+        }, 200);
     };
 
     var modificarObra = function (id) {
 
         idObra = id;
         limpiarFormularioObra();
+
+        // Ocultar panel de importación en modo edición
+        $('#panelImportSeguimiento').hide();
+        $('#hdnIdObraSeguimiento').val('0');
 
         // ✅ Primero traemos los datos, luego cargamos cada combo
         //    y asignamos el valor DENTRO de su propio callback.
@@ -641,14 +654,9 @@ const ObrasModule = (function () {
         //        $('#cboAnioAccion').append('<option value="' + item.anio + '">' + item.anio + '</option>');
         //    });
         //});
-        // Años del filtro del grid (los que ya tiene la obra)
-        $.get(API + 'getAniosAccion/' + idobra, function (res) {
-            $('#cboFiltroAnioAccion').find('option:not(:first)').remove();
-            res.forEach(function (item) {
-                $('#cboFiltroAnioAccion').append(
-                    '<option value="' + item.anio + '">' + item.anio + '</option>');
-            });
-        });
+        // Años del filtro del grid: ya no se usa (select de año eliminado del panel)
+        // Se cargan todos los años disponibles para nueva acción
+        // $.get(API + 'getAniosAccion/' + idobra, ...)  -- ya no necesario
         // También cargar todos los años del catálogo para nueva acción
         //$.get(API + 'getAnios', function (res) {
         //    $('#cboAnioAccion').empty().append('<option value="">(SELECCIONE)</option>');
@@ -838,7 +846,7 @@ const ObrasModule = (function () {
             //success: function () {
             //    mostrarPanelAcciones('grid');
             //    limpiarFormAccion();
-            //    cargarTablaAcciones($('#hddIdObraAcciones').val(), $('#cboFiltroAnioAccion').val());
+            //    cargarTablaAcciones($('#hddIdObraAcciones').val(), '');
             //    Swal.fire({
             //        title: '¡Éxito!',
             //        text: payload.accion === 'add' ? 'Acción agregada.' : 'Acción actualizada.',
@@ -848,21 +856,10 @@ const ObrasModule = (function () {
             success: function () {
                 limpiarFormAccion();
 
-                // Actualizar años del filtro si es nueva acción
-                if (payload.accion === 'add') {
-                    $.get(API + 'getAniosAccion/' + $('#hddIdObraAcciones').val(), function (res) {
-                        $('#cboFiltroAnioAccion').find('option:not(:first)').remove();
-                        res.forEach(function (item) {
-                            $('#cboFiltroAnioAccion').append(
-                                '<option value="' + item.anio + '">' + item.anio + '</option>');
-                        });
-                        $('#cboFiltroAnioAccion').val(payload.anio);
-                    });
-                }
                 // Cargar tabla y DESPUÉS mostrar panel y Swal
                 $.get(API + 'getAcciones', {
                     idobra: $('#hddIdObraAcciones').val(),
-                    anio: payload.accion === 'add' ? payload.anio : $('#cboFiltroAnioAccion').val()
+                    anio: ''
                 }).done(function (data) {
                     mostrarPanelAcciones('grid');
 
@@ -935,7 +932,7 @@ const ObrasModule = (function () {
                     url: API + 'eliminarAccion/' + idAccion,
                     type: 'DELETE',
                     success: function () {
-                        cargarTablaAcciones($('#hddIdObraAcciones').val(), $('#cboFiltroAnioAccion').val());
+                        cargarTablaAcciones($('#hddIdObraAcciones').val(), '');
                         Swal.fire({ title: 'Eliminada', icon: 'success', timer: 1500, showConfirmButton: false });
                     },
                     error: function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); }
@@ -1249,7 +1246,7 @@ const ObrasModule = (function () {
                     url: API + 'quitarContrato/' + idAccion,
                     type: 'POST',
                     success: function () {
-                        cargarTablaAcciones($('#hddIdObraAcciones').val(), $('#cboFiltroAnioAccion').val());
+                        cargarTablaAcciones($('#hddIdObraAcciones').val(), '');
                         Swal.fire({ title: 'Listo', icon: 'success', timer: 1500, showConfirmButton: false });
                     },
                     error: function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); }
@@ -1302,7 +1299,8 @@ const ObrasModule = (function () {
             acciones: $('#txtAcciones').val(),
             franja: $('#chkFranja').is(':checked'),
             antecedentes: $('#txtAntecedentes').val(),
-            observaciones: $('#txtObservaciones').val()
+            observaciones: $('#txtObservaciones').val(),
+            idObraSeguimiento: parseInt($('#hdnIdObraSeguimiento').val()) || 0
         };
 
         var url = 'guardarObra';
@@ -1461,9 +1459,13 @@ const ObrasModule = (function () {
         });
 
         // ── Eventos Acciones ──
-        $('#cboFiltroAnioAccion').on('change', function () {
-            cargarTablaAcciones($('#hddIdObraAcciones').val(), $(this).val());
+        // Filtro año de acciones eliminado — se muestran todas las acciones directamente
+
+        // Búsqueda en sistema seguimiento con Enter
+        $('#txtBuscarSeg, #txtAnioBuscarSeg').on('keypress', function (e) {
+            if (e.which === 13) buscarObrasSeguimiento();
         });
+
         $('#btnNuevaAccion').on('click', function () {
             $('#hddAccionMovAccion').val('add');
             $('#hddIdAccionActual').val('');
@@ -1544,13 +1546,144 @@ const ObrasModule = (function () {
                 }),
                 success: function () {
                     mostrarPanelAcciones('grid');
-                    cargarTablaAcciones($('#hddIdObraAcciones').val(), $('#cboFiltroAnioAccion').val());
+                    cargarTablaAcciones($('#hddIdObraAcciones').val(), '');
                     Swal.fire({ title: '¡Contrato asignado!', icon: 'success', timer: 1500, showConfirmButton: false });
                 },
                 error: function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); }
             });
         });
 
+    };
+
+    // ══════════════════════════════════════════════════════
+    // IMPORTACIÓN DESDE SISTEMA DE SEGUIMIENTO
+    // ══════════════════════════════════════════════════════
+
+    var buscarObrasSeguimiento = function (autoLoad) {
+        var buscar = $('#txtBuscarSeg').val().trim();
+        var anio   = $('#txtAnioBuscarSeg').val().trim();
+        var top    = (autoLoad === true) ? 40 : 0;  // 0 = sin límite (búsqueda manual)
+
+        $('#tbodyResultadosSeg').html(
+            '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> ' +
+            (autoLoad ? 'Cargando obras recientes...' : 'Buscando...') +
+            '</td></tr>');
+        $('#divResultadosSeg').show();
+
+        $.get(API + 'buscarObrasSeguimiento', { buscar: buscar, anio: anio, top: top }, function (res) {
+            var $tbody = $('#tbodyResultadosSeg').empty();
+
+            if (!res || !res.length) {
+                $tbody.html('<tr><td colspan="6" class="text-center text-muted py-3">Sin resultados</td></tr>');
+                return;
+            }
+
+            res.forEach(function (o) {
+                var accionHtml = o.yaRegistrada
+                    ? '<span class="badge badge-secondary px-3 py-2">Ya registrada</span>'
+                    : '<button type="button" class="btn btn-sm btn-success" onclick="ObrasModule.seleccionarObraSeguimiento(' + o.idobra + '); return false;"><i class="fas fa-check mr-1"></i>Seleccionar</button>';
+
+                $tbody.append(
+                    '<tr>' +
+                    '<td><strong>' + (o.noObra || '') + '</strong></td>' +
+                    '<td>' + (o.nombre || '') + '</td>' +
+                    '<td><small>' + (o.subrubro || '') + '</small></td>' +
+                    '<td class="text-center">' + (o.anio || '') + '</td>' +
+                    '<td class="text-center"><span class="badge badge-light-primary">' + (o.numAcciones || 0) + '</span></td>' +
+                    '<td class="text-center">' + accionHtml + '</td>' +
+                    '</tr>');
+            });
+        }).fail(function () {
+            $('#tbodyResultadosSeg').html(
+                '<tr><td colspan="6" class="text-center text-danger">Error al buscar</td></tr>');
+        });
+    };
+
+    var seleccionarObraSeguimiento = function (idObraOrigen) {
+        // 1. Obtener preview de la obra (acciones a crear)
+        $.get(API + 'previewImportacion/' + idObraOrigen, function (preview) {
+            // 2. Obtener datos para llenar el formulario
+            $.get(API + 'getDatosSeguimiento/' + idObraOrigen, function (datos) {
+
+                // Llenar formulario con datos de la obra origen
+                $('#txtNoObra').val(datos.noObra);
+                $('#txtNombreObra').val(datos.nombre);
+                $('#txtAcciones').val(datos.acciones);
+                $('#chkFranja').prop('checked', datos.franja);
+                $('#txtAntecedentes').val(datos.antecedentes);
+                $('#txtObservaciones').val(datos.observaciones);
+
+                // Combos — se intentan set después de que estén cargados
+                setTimeout(function () {
+                    if (datos.idRubro) {
+                        $('#cmbRubroModal').val(datos.idRubro).trigger('change');
+                        // Subrubro se carga en cascada al cambiar rubro
+                        setTimeout(function () {
+                            if (datos.idSubrubro) $('#cmbSubrubroModal').val(datos.idSubrubro);
+                        }, 600);
+                    }
+                    if (datos.idPrograma)         $('#cmbPrograma').val(datos.idPrograma);
+                    if (datos.idArea)             $('#cmbArea').val(datos.idArea);
+                    if (datos.idNivelMarginacion) $('#cmbMarginacion').val(datos.idNivelMarginacion);
+                    if (datos.idAprima)           $('#cmbTipoObra').val(datos.idAprima);
+                }, 300);
+
+                // Guardar vínculo
+                $('#hdnIdObraSeguimiento').val(idObraOrigen);
+
+                // Ocultar grid de búsqueda
+                $('#divResultadosSeg').hide();
+
+                // Mostrar alerta amarilla con resumen
+                var listaAcciones = '';
+                if (preview.acciones && preview.acciones.length) {
+                    listaAcciones = '<ul class="mb-0 mt-1" style="font-size:0.85em;">';
+                    preview.acciones.forEach(function (a) {
+                        listaAcciones += '<li>' + (a.anio ? '[' + a.anio + '] ' : '') + (a.accion || 'Acción') + '</li>';
+                    });
+                    listaAcciones += '</ul>';
+                }
+
+                var msg = '<strong><i class="fas fa-info-circle mr-1"></i> Datos importados de la obra ' +
+                    (preview.obra.noObra || '') + ' del Sistema de Seguimiento</strong>';
+                if (listaAcciones) {
+                    msg += '<br><small class="text-dark font-weight-bold">Se crearán las siguientes acciones al guardar:</small>' + listaAcciones;
+                }
+                $('#alertaImportacionTexto').html(msg);
+                $('#alertaImportacion').show();
+
+            }).fail(function () {
+                Swal.fire('Error', 'No se pudo obtener los datos de la obra', 'error');
+            });
+        }).fail(function () {
+            Swal.fire('Error', 'No se pudo obtener el preview de la obra', 'error');
+        });
+    };
+
+    var elegirOtraObra = function () {
+        // Limpiar vínculo y mostrar búsqueda nuevamente
+        $('#hdnIdObraSeguimiento').val('0');
+        $('#alertaImportacion').hide();
+        $('#divResultadosSeg').show();
+        $('#tbodyResultadosSeg').empty();
+        $('#txtBuscarSeg, #txtAnioBuscarSeg').val('');
+    };
+
+    var quitarVinculo = function () {
+        // Quitar vínculo pero dejar el formulario con los datos ya copiados
+        $('#hdnIdObraSeguimiento').val('0');
+        $('#alertaImportacion').hide();
+        $('#divResultadosSeg').hide();
+    };
+
+    // Limpiar el panel de importación cuando se abre el modal para nueva obra
+    var limpiarPanelImportacion = function () {
+        $('#hdnIdObraSeguimiento').val('0');
+        $('#alertaImportacion').hide();
+        $('#divResultadosSeg').hide();
+        $('#tbodyResultadosSeg').empty();
+        $('#txtBuscarSeg').val('');
+        $('#txtAnioBuscarSeg').val('');
     };
 
     // ══════════════════════════════════════════════════════
@@ -1564,8 +1697,8 @@ const ObrasModule = (function () {
         modificarObra: modificarObra,
         eliminarObra: eliminarObra,
         verAcciones: verAcciones,
-        guardarObra: guardarObra,   // 👈 AGREGAR ESTA LÍNEA
-        //LOCALIDADES
+        guardarObra: guardarObra,
+        // LOCALIDADES
         verLocalidades: verLocalidades,
         editarLocalidad: editarLocalidad,
         eliminarLocalidad: eliminarLocalidad,
@@ -1584,7 +1717,12 @@ const ObrasModule = (function () {
         quitarContrato: quitarContrato,
         guardarAccion: guardarAccion,
         guardarOrigen: guardarOrigen,
-        guardarCOCI: guardarCOCI
+        guardarCOCI: guardarCOCI,
+        // IMPORTACIÓN SEGUIMIENTO
+        buscarObrasSeguimiento: buscarObrasSeguimiento,
+        seleccionarObraSeguimiento: seleccionarObraSeguimiento,
+        elegirOtraObra: elegirOtraObra,
+        quitarVinculo: quitarVinculo
     };
 
 })();

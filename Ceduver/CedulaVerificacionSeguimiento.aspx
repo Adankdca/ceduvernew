@@ -186,17 +186,77 @@
                         </div>
                     </div>
                     
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <input type="file" id="fileFotoGeo" class="form-control">
+                    <!-- Panel de subida de foto con georeferencia opcional -->
+                    <div class="card border shadow-sm mb-4" style="border-left: 4px solid #3699FF !important;">
+                        <div class="card-header py-2 px-3" style="background:#eef6ff;">
+                            <span class="font-weight-bold text-primary">
+                                <i class="fas fa-camera mr-1"></i> Agregar nueva foto
+                            </span>
                         </div>
-                        <div class="col-md-4">
-                            <button type="button" class="btn btn-primary" id="btnAgregarFotoGeo">
-                                <i class="fas fa-upload"></i> Subir Foto
-                            </button>
+                        <div class="card-body">
+                            <!-- Fila 1: Archivo -->
+                            <div class="row align-items-end">
+                                <div class="col-md-8 mb-3">
+                                    <label class="font-weight-bold mb-1">
+                                        <i class="fas fa-image text-primary mr-1"></i> Seleccionar foto
+                                    </label>
+                                    <div class="custom-file">
+                                        <input type="file" class="custom-file-input" id="fileFotoGeo" accept="image/*">
+                                        <label class="custom-file-label" for="fileFotoGeo">Elegir imagen...</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3 text-center">
+                                    <div id="previewFotoGeo" style="display:none;">
+                                        <img id="imgPreviewFotoGeo" class="rounded border"
+                                             style="max-height:80px; max-width:100%; object-fit:cover;">
+                                    </div>
+                                    <div id="placeholderPreviewGeo" class="text-muted py-2">
+                                        <i class="fas fa-image fa-2x text-light-dark"></i>
+                                        <div><small>Vista previa</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Fila 2: Georeferencia opcional -->
+                            <div class="row align-items-end">
+                                <div class="col-12 mb-1">
+                                    <span class="font-weight-bold text-muted small">
+                                        <i class="fas fa-map-marker-alt text-warning mr-1"></i>
+                                        Georeferencia <span class="text-muted font-weight-normal">(opcional — puedes escribirla o capturarla con GPS)</span>
+                                    </span>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label class="small mb-1">Latitud</label>
+                                    <input type="text" class="form-control form-control-sm" id="txtLatFotoGeo"
+                                           placeholder="Ej. 16.748231">
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label class="small mb-1">Longitud</label>
+                                    <input type="text" class="form-control form-control-sm" id="txtLonFotoGeo"
+                                           placeholder="Ej. -93.115420">
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label class="small mb-1 d-block">&nbsp;</label>
+                                    <button type="button" class="btn btn-warning btn-sm btn-block" id="btnCapturarGPSGeo">
+                                        <i class="fas fa-crosshairs mr-1"></i> Obtener GPS
+                                    </button>
+                                    <div id="statusGPSGeo" class="text-muted small mt-1" style="display:none;"></div>
+                                </div>
+                            </div>
+                            <!-- Fila 3: Botón subir -->
+                            <div class="row mt-2">
+                                <div class="col-12 text-right">
+                                    <button type="button" class="btn btn-primary" id="btnAgregarFotoGeo">
+                                        <i class="fas fa-upload mr-1"></i> Subir Foto
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- Fotos -->
+
+                    <!-- Fotos registradas -->
+                    <div class="font-weight-bold text-muted small mb-2">
+                        <i class="fas fa-images mr-1"></i> Fotos registradas
+                    </div>
                     <div class="row" id="containerFotosGeo">
                         <!-- Las fotos se cargan dinamicamente -->
                     </div>
@@ -281,7 +341,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <%-- Fila 1: AGEB | Fecha | Modalidad --%>
+                            <%-- Fila 1: AGEB | Fecha | Supervisor | Modalidad --%>
                             <div class="row">
                                 <div class="col-md-3">
                                     <div class="form-group">
@@ -295,7 +355,13 @@
                                         <input type="text" class="form-control fecha" id="txtFechaVerificacionInicio" placeholder="dd/mm/aaaa">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold"><i class="fas fa-user-hard-hat text-muted mr-1"></i>Supervisor de Obras:</label>
+                                        <input type="text" class="form-control" id="txtSupervisorInicio" placeholder="Nombre del supervisor" maxlength="200">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="font-weight-bold">Modalidad del Proyecto:</label>
                                         <div class="checkbox-inline mt-1">
@@ -482,144 +548,164 @@
                         </div>
                     </div>
 
-                    <!-- Fotos Inicio (Croquis + 4 fotos) -->
-
-                    <!-- Fotos Inicio (Croquis + 4 fotos) -->
                     <!-- ═══ SECCIÓN D — Croquis y Fotos ═══ -->
                     <div class="card card-custom gutter-b shadow-sm mt-3" style="border-left:4px solid #F64E60 !important;">
                         <div class="card-header" style="background:#fff0f2; min-height:45px; padding:10px 20px;">
                             <div class="card-title mb-0">
                                 <i class="fas fa-camera text-danger mr-2"></i>
                                 <span class="font-weight-bold text-danger">SECCIÓN D — Croquis y Fotografías</span>
+                                <small class="text-muted ml-2 font-weight-normal">(georeferencia opcional en cada foto)</small>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <%-- Croquis --%>
+
+                                <%-- CROQUIS --%>
                                 <div class="col-md-4 mb-3">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Croquis</span>
+                                            <span class="font-weight-bold small"><i class="fas fa-map text-secondary mr-1"></i> Croquis</span>
                                             <div id="accionesCroquisInicio" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary"
-                                                        onclick="CedulaModule.descargarFotoInicio('croquis')" title="Descargar">
-                                                    <i class="fas fa-download fa-sm"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                        onclick="CedulaModule.eliminarFotoInicio('croquis')" title="Eliminar">
-                                                    <i class="fas fa-trash fa-sm"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoInicio('croquis')" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
+                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoInicio('croquis')" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
                                             </div>
                                         </div>
                                         <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgCroquisInicio" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderCroquisInicio" class="text-muted py-3">
-                                                <i class="fas fa-map fa-2x"></i><br><small>Sin croquis</small>
-                                            </div>
+                                            <img id="imgCroquisInicio" class="rounded" style="display:none; max-width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="window.open(this.src,'_blank')">
+                                            <div id="placeholderCroquisInicio" class="text-muted py-3"><i class="fas fa-map fa-2x"></i><br><small>Sin croquis</small></div>
                                             <input type="file" class="form-control form-control-sm mt-2" id="fileCroquisInicio" accept="image/*">
+                                            <%-- Georeferencia --%>
+                                            <div class="mt-2 border-top pt-2 text-left">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lat:</span>
+                                                    <input type="text" class="form-control form-control-sm" id="txtLatCroquisInicio" placeholder="0.000000" style="font-size:11px;">
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lon:</span>
+                                                    <input type="text" class="form-control form-control-sm mr-1" id="txtLonCroquisInicio" placeholder="0.000000" style="font-size:11px;">
+                                                    <button type="button" class="btn btn-xs btn-warning flex-shrink-0" onclick="CedulaModule.capturarGPSFotoInicio('Croquis')" title="Capturar GPS"><i class="fas fa-crosshairs"></i></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <%-- Foto 1 --%>
+
+                                <%-- FOTO 1 --%>
                                 <div class="col-md-2 mb-3">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                                             <span class="font-weight-bold small">Foto 1</span>
                                             <div id="accionesFoto1Inicio" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary"
-                                                        onclick="CedulaModule.descargarFotoInicio(1)" title="Descargar">
-                                                    <i class="fas fa-download fa-sm"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                        onclick="CedulaModule.eliminarFotoInicio(1)" title="Eliminar">
-                                                    <i class="fas fa-trash fa-sm"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoInicio(1)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
+                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoInicio(1)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
                                             </div>
                                         </div>
                                         <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto1Inicio" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto1Inicio" class="text-muted py-3">
-                                                <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                            </div>
+                                            <img id="imgFoto1Inicio" class="rounded" style="display:none; max-width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="window.open(this.src,'_blank')">
+                                            <div id="placeholderFoto1Inicio" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
                                             <input type="file" class="form-control form-control-sm mt-2" id="fileFoto1Inicio" accept="image/*">
+                                            <div class="mt-2 border-top pt-2 text-left">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lat:</span>
+                                                    <input type="text" class="form-control form-control-sm" id="txtLatFoto1Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lon:</span>
+                                                    <input type="text" class="form-control form-control-sm mr-1" id="txtLonFoto1Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                    <button type="button" class="btn btn-xs btn-warning flex-shrink-0" onclick="CedulaModule.capturarGPSFotoInicio('Foto1')" title="Capturar GPS"><i class="fas fa-crosshairs"></i></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <%-- Foto 2 --%>
+
+                                <%-- FOTO 2 --%>
                                 <div class="col-md-2 mb-3">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                                             <span class="font-weight-bold small">Foto 2</span>
                                             <div id="accionesFoto2Inicio" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary"
-                                                        onclick="CedulaModule.descargarFotoInicio(2)" title="Descargar">
-                                                    <i class="fas fa-download fa-sm"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                        onclick="CedulaModule.eliminarFotoInicio(2)" title="Eliminar">
-                                                    <i class="fas fa-trash fa-sm"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoInicio(2)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
+                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoInicio(2)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
                                             </div>
                                         </div>
                                         <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto2Inicio" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto2Inicio" class="text-muted py-3">
-                                                <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                            </div>
+                                            <img id="imgFoto2Inicio" class="rounded" style="display:none; max-width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="window.open(this.src,'_blank')">
+                                            <div id="placeholderFoto2Inicio" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
                                             <input type="file" class="form-control form-control-sm mt-2" id="fileFoto2Inicio" accept="image/*">
+                                            <div class="mt-2 border-top pt-2 text-left">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lat:</span>
+                                                    <input type="text" class="form-control form-control-sm" id="txtLatFoto2Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lon:</span>
+                                                    <input type="text" class="form-control form-control-sm mr-1" id="txtLonFoto2Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                    <button type="button" class="btn btn-xs btn-warning flex-shrink-0" onclick="CedulaModule.capturarGPSFotoInicio('Foto2')" title="Capturar GPS"><i class="fas fa-crosshairs"></i></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <%-- Foto 3 --%>
+
+                                <%-- FOTO 3 --%>
                                 <div class="col-md-2 mb-3">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                                             <span class="font-weight-bold small">Foto 3</span>
                                             <div id="accionesFoto3Inicio" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary"
-                                                        onclick="CedulaModule.descargarFotoInicio(3)" title="Descargar">
-                                                    <i class="fas fa-download fa-sm"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                        onclick="CedulaModule.eliminarFotoInicio(3)" title="Eliminar">
-                                                    <i class="fas fa-trash fa-sm"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoInicio(3)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
+                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoInicio(3)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
                                             </div>
                                         </div>
                                         <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto3Inicio" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto3Inicio" class="text-muted py-3">
-                                                <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                            </div>
+                                            <img id="imgFoto3Inicio" class="rounded" style="display:none; max-width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="window.open(this.src,'_blank')">
+                                            <div id="placeholderFoto3Inicio" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
                                             <input type="file" class="form-control form-control-sm mt-2" id="fileFoto3Inicio" accept="image/*">
+                                            <div class="mt-2 border-top pt-2 text-left">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lat:</span>
+                                                    <input type="text" class="form-control form-control-sm" id="txtLatFoto3Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lon:</span>
+                                                    <input type="text" class="form-control form-control-sm mr-1" id="txtLonFoto3Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                    <button type="button" class="btn btn-xs btn-warning flex-shrink-0" onclick="CedulaModule.capturarGPSFotoInicio('Foto3')" title="Capturar GPS"><i class="fas fa-crosshairs"></i></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <%-- Foto 4 --%>
+
+                                <%-- FOTO 4 --%>
                                 <div class="col-md-2 mb-3">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                                             <span class="font-weight-bold small">Foto 4</span>
                                             <div id="accionesFoto4Inicio" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary"
-                                                        onclick="CedulaModule.descargarFotoInicio(4)" title="Descargar">
-                                                    <i class="fas fa-download fa-sm"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                        onclick="CedulaModule.eliminarFotoInicio(4)" title="Eliminar">
-                                                    <i class="fas fa-trash fa-sm"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoInicio(4)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
+                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoInicio(4)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
                                             </div>
                                         </div>
                                         <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto4Inicio" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto4Inicio" class="text-muted py-3">
-                                                <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                            </div>
+                                            <img id="imgFoto4Inicio" class="rounded" style="display:none; max-width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="window.open(this.src,'_blank')">
+                                            <div id="placeholderFoto4Inicio" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
                                             <input type="file" class="form-control form-control-sm mt-2" id="fileFoto4Inicio" accept="image/*">
+                                            <div class="mt-2 border-top pt-2 text-left">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lat:</span>
+                                                    <input type="text" class="form-control form-control-sm" id="txtLatFoto4Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-muted mr-1" style="font-size:11px; min-width:28px;">Lon:</span>
+                                                    <input type="text" class="form-control form-control-sm mr-1" id="txtLonFoto4Inicio" placeholder="0.000000" style="font-size:11px;">
+                                                    <button type="button" class="btn btn-xs btn-warning flex-shrink-0" onclick="CedulaModule.capturarGPSFotoInicio('Foto4')" title="Capturar GPS"><i class="fas fa-crosshairs"></i></button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
                     </div>

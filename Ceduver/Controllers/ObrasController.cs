@@ -15,6 +15,7 @@ namespace Ceduver.Controllers
     public class ObrasController : ApiController
     {
         private readonly string _connectionString = ConfigurationManager.ConnectionStrings["constr"].ToString();
+        private readonly string _connectionStringSeg = ConfigurationManager.ConnectionStrings["constrSeguimiento"].ToString();
 
         // ══════════════════════════════════════════════════════════════════
         // GET OBRAS — consulta unificada con parámetros opcionales
@@ -269,7 +270,8 @@ namespace Ceduver.Controllers
                             Op_Franjafronteriza,
                             IdNivelmarginacion,
                             IDaprima,
-                            OP_FechaCreacion
+                            OP_FechaCreacion,
+                            IDObraOrigenSeguimiento
                         )
                         VALUES
                         (
@@ -289,7 +291,8 @@ namespace Ceduver.Controllers
                             @franja,
                             @idNivelMarginacion,
                             @idAprima,
-                            GETDATE()
+                            GETDATE(),
+                            @idObraSeguimientoNull
                         );
 
                         SELECT CAST(SCOPE_IDENTITY() as int);";
@@ -307,10 +310,23 @@ namespace Ceduver.Controllers
                                     m.acciones,
                                     m.franja,
                                     m.idNivelMarginacion,
-                                    m.idAprima
+                                    m.idAprima,
+                                    idObraSeguimientoNull = m.idObraSeguimiento > 0 ? (int?)m.idObraSeguimiento : null
                                 }).First();
 
-                                return Ok(new { success = true, id });
+                                int newId = id;
+
+                                // ── Importación en cascada desde Seguimiento ────────────────
+                                if (m.idObraSeguimiento > 0)
+                                {
+                                    ImportarCascada(con, newId, m.idObraSeguimiento);
+                                    // Guardar el vínculo
+                                    con.Execute(
+                                        "UPDATE TBLP_Obraproyecto SET IDObraOrigenSeguimiento=@seg WHERE IDobraproyecto=@id",
+                                        new { seg = m.idObraSeguimiento, id = newId });
+                                }
+
+                                return Ok(new { success = true, id = newId });
                     }
                     else
                     {
@@ -872,7 +888,8 @@ namespace Ceduver.Controllers
             {
                 using (var con = new SqlConnection(_connectionString))
                 {
-                    string sql = @"
+                    // Construir SQL dinámico para evitar comparación INT vs string vacío
+                    var sbAcc = new System.Text.StringBuilder(@"
                 SELECT DISTINCT
                     A.IDAcciones       AS idAccion,
                     A.OP_Año           AS anio,
@@ -889,11 +906,18 @@ namespace Ceduver.Controllers
                 LEFT JOIN TBLC_Tipoejecucion TE ON A.IDtipoejecucion = TE.IDtipoejecucion
                 LEFT JOIN TblC_TipoAccion    TA ON A.IDTipoaccion    = TA.IDTipoaccion
                 LEFT JOIN TBLD_Contrato       C ON A.IDContrato       = C.IDContrato
-                WHERE A.IDobraproyecto = @idobra
-                  AND (@anio = '' OR A.OP_Año = @anio)
-                ORDER BY A.IDAcciones DESC";
+                WHERE A.IDobraproyecto = @idobra");
 
-                    var lista = con.Query(sql, new { idobra, anio }).ToList();
+                    int? anioInt = null;
+                    if (!string.IsNullOrEmpty(anio))
+                    {
+                        anioInt = Convert.ToInt32(anio);
+                        sbAcc.Append(" AND A.OP_Año = @anioInt");
+                    }
+
+                    sbAcc.Append(" ORDER BY A.IDAcciones DESC");
+
+                    var lista = con.Query(sbAcc.ToString(), new { idobra, anioInt }).ToList();
                     return Ok(lista);
                 }
             }
@@ -1595,8 +1619,431 @@ namespace Ceduver.Controllers
         }
 
         // ══════════════════════════════════════════════════════════════════
+        // IMPORTACIÓN DESDE SISTEMA DE SEGUIMIENTO
+        // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Busca obras en BDconseochilonseguimiento filtrando por número/nombre y año.
+        /// Marca yaRegistrada si ya existe en la BD local.
+        /// </summary>
+        [HttpGet]
+        [Route("buscarObrasSeguimiento")]
+        public IHttpActionResult BuscarObrasSeguimiento(string buscar = "", string anio = "", int top = 0)
+        {
+            try
+            {
+                using (var conSeg = new SqlConnection(_connectionStringSeg))
+                using (var conLocal = new SqlConnection(_connectionString))
+                {
+                    conSeg.Open();
+                    conLocal.Open();
+
+                    int? anioInt = string.IsNullOrEmpty(anio) ? (int?)null : (int?)Convert.ToInt32(anio);
+                    bool esAutoLoad = (top > 0);
+
+                    // Construir SQL dinámico — GROUP BY para contar acciones correctamente
+                    // TBLC_SubRubroEspecifico en BDconseochilonseguimiento usa columna "Descripcion"
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("SELECT ");
+                    if (esAutoLoad) sb.Append($"TOP {top} ");
+                    sb.Append(@"
+                            O.IDobraproyecto                              AS idobra,
+                            O.OP_Num_obra                                 AS noObra,
+                            O.OP_NombreObra                               AS nombre,
+                            ISNULL(S.Descripcion,'')                      AS subrubro,
+                            ISNULL(CAST(MAX(A.OP_Año) AS VARCHAR(10)),'') AS anio,
+                            COUNT(A.IDAcciones)                           AS numAcciones
+                        FROM TBLP_Obraproyecto O
+                        LEFT JOIN TBLC_SubRubroEspecifico S ON S.IDSubRubroEspecifico = O.IDSubRubroEspecifico
+                        LEFT JOIN TblD_Acciones A ON A.IDobraproyecto = O.IDobraproyecto
+                        WHERE O.OP_Eliminado = 0");
+
+                    // Filtros solo en búsqueda manual
+                    if (!esAutoLoad)
+                    {
+                        if (!string.IsNullOrEmpty(buscar))
+                            sb.Append(" AND (O.OP_Num_obra LIKE '%'+@buscar+'%' OR O.OP_NombreObra LIKE '%'+@buscar+'%')");
+                        if (anioInt.HasValue)
+                            sb.Append(" AND A.OP_Año = @anioInt");
+                    }
+
+                    sb.Append(" GROUP BY O.IDobraproyecto, O.OP_Num_obra, O.OP_NombreObra, O.IDSubRubroEspecifico, S.Descripcion");
+                    sb.Append(" ORDER BY O.IDobraproyecto DESC");
+
+                    string sql = sb.ToString();
+                    var obras = conSeg.Query(sql, new { buscar, anioInt }).ToList();
+
+                    // Obtener IDs ya registrados en la BD local
+                    var registradas = conLocal.Query<int>(
+                        "SELECT IDObraOrigenSeguimiento FROM TBLP_Obraproyecto " +
+                        "WHERE IDObraOrigenSeguimiento IS NOT NULL AND IDObraOrigenSeguimiento > 0 " +
+                        "AND OP_Eliminado = 0").ToList();
+
+                    var resultado = obras.Select(o => new ModelObra.ObraSeguimientoDTO
+                    {
+                        idobra = (int)o.idobra,
+                        noObra = o.noObra?.ToString() ?? "",
+                        nombre = o.nombre?.ToString() ?? "",
+                        subrubro = o.subrubro?.ToString() ?? "",
+                        anio = o.anio?.ToString() ?? "",
+                        numAcciones = (int)o.numAcciones,
+                        yaRegistrada = registradas.Contains((int)o.idobra)
+                    }).ToList();
+
+                    return Ok(resultado);
+                }
+            }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        /// <summary>
+        /// Devuelve la obra y sus acciones desde BDconseochilonseguimiento (preview antes de importar).
+        /// </summary>
+        [HttpGet]
+        [Route("previewImportacion/{idObraOrigen}")]
+        public IHttpActionResult PreviewImportacion(int idObraOrigen)
+        {
+            try
+            {
+                using (var con = new SqlConnection(_connectionStringSeg))
+                {
+                    con.Open();
+
+                    var obra = con.QueryFirstOrDefault(@"
+                        SELECT O.IDobraproyecto AS idobra, O.OP_Num_obra AS noObra,
+                               O.OP_NombreObra AS nombre,
+                               ISNULL(S.Descripcion,'') AS subrubro
+                        FROM TBLP_Obraproyecto O
+                        LEFT JOIN TBLC_SubRubroEspecifico S ON S.IDSubRubroEspecifico = O.IDSubRubroEspecifico
+                        WHERE O.IDobraproyecto = @id AND O.OP_Eliminado = 0",
+                        new { id = idObraOrigen });
+
+                    if (obra == null) return NotFound();
+
+                    // Detectar columnas de catálogos en BD seguimiento para evitar errores de columna
+                    string colTipoAccion = "''" ;
+                    string colTipoEjecucion = "''";
+                    try
+                    {
+                        var colsTA = con.Query<string>("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='TBLC_Tipoaccion'").ToList();
+                        if (colsTA.Any(c => c.Equals("TipoaccionNombre", StringComparison.OrdinalIgnoreCase)))
+                            colTipoAccion = "ISNULL(TA.TipoaccionNombre,'')";
+                        else if (colsTA.Any(c => c.Equals("Nombre", StringComparison.OrdinalIgnoreCase)))
+                            colTipoAccion = "ISNULL(TA.Nombre,'')";
+                        else if (colsTA.Count > 1) colTipoAccion = $"ISNULL(CAST(TA.[{colsTA[1]}] AS VARCHAR(200)),'')";
+
+                        var colsTE = con.Query<string>("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='TBLC_Tipoejecucion'").ToList();
+                        if (colsTE.Any(c => c.Equals("TipoejecucionNombre", StringComparison.OrdinalIgnoreCase)))
+                            colTipoEjecucion = "ISNULL(TE.TipoejecucionNombre,'')";
+                        else if (colsTE.Any(c => c.Equals("Nombre", StringComparison.OrdinalIgnoreCase)))
+                            colTipoEjecucion = "ISNULL(TE.Nombre,'')";
+                        else if (colsTE.Count > 1) colTipoEjecucion = $"ISNULL(CAST(TE.[{colsTE[1]}] AS VARCHAR(200)),'')";
+                    }
+                    catch { /* usar vacío como fallback */ }
+
+                    var acciones = con.Query($@"
+                        SELECT A.IDAcciones AS idAccion,
+                               ISNULL(A.AC_Accion,'') AS accion,
+                               ISNULL(A.OP_Año,0)     AS anio,
+                               {colTipoAccion}         AS tipoAccion,
+                               {colTipoEjecucion}      AS tipoEjecucion
+                        FROM TblD_Acciones A
+                        LEFT JOIN TBLC_Tipoaccion TA ON TA.IDTipoaccion = A.IDTipoaccion
+                        LEFT JOIN TBLC_Tipoejecucion TE ON TE.IDtipoejecucion = A.IDtipoejecucion
+                        WHERE A.IDobraproyecto = @id
+                        ORDER BY A.OP_Año, A.IDAcciones",
+                        new { id = idObraOrigen }).ToList();
+
+                    return Ok(new
+                    {
+                        obra = new
+                        {
+                            idobra = (int)obra.idobra,
+                            noObra = obra.noObra?.ToString() ?? "",
+                            nombre = obra.nombre?.ToString() ?? "",
+                            subrubro = obra.subrubro?.ToString() ?? ""
+                        },
+                        acciones = acciones.Select(a => new
+                        {
+                            idAccion = (int)a.idAccion,
+                            accion = a.accion?.ToString() ?? "",
+                            anio = (int)a.anio,
+                            tipoAccion = a.tipoAccion?.ToString() ?? "",
+                            tipoEjecucion = a.tipoEjecucion?.ToString() ?? ""
+                        }).ToList()
+                    });
+                }
+            }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        /// <summary>
+        /// Devuelve los datos de la obra del sistema de seguimiento para pre-llenar el formulario.
+        /// </summary>
+        [HttpGet]
+        [Route("getDatosSeguimiento/{idObraOrigen}")]
+        public IHttpActionResult GetDatosSeguimiento(int idObraOrigen)
+        {
+            try
+            {
+                using (var conSeg = new SqlConnection(_connectionStringSeg))
+                using (var conLocal = new SqlConnection(_connectionString))
+                {
+                    conSeg.Open();
+                    conLocal.Open();
+
+                    // Datos de la obra origen
+                    var o = conSeg.QueryFirstOrDefault(@"
+                        SELECT O.IDobraproyecto, O.OP_Num_obra, O.OP_NombreObra,
+                               O.IDRubro, O.IDPrograma, O.IDprogram, O.IDArea,
+                               O.OP_Antecendentes, O.OP_Observaciones, O.OP_Acciones,
+                               O.Op_Franjafronteriza, O.IdNivelmarginacion, O.IDaprima
+                        FROM TBLP_Obraproyecto O
+                        WHERE O.IDobraproyecto = @id AND O.OP_Eliminado = 0",
+                        new { id = idObraOrigen });
+
+                    if (o == null) return NotFound();
+
+                    return Ok(new
+                    {
+                        idobra = 0,   // nuevo en la BD local
+                        idObraSeguimiento = idObraOrigen,
+                        noObra = o.OP_Num_obra?.ToString() ?? "",
+                        nombre = o.OP_NombreObra?.ToString() ?? "",
+                        idRubro = o.IDRubro != null ? (int)o.IDRubro : 0,
+                        idSubrubro = o.IDPrograma != null ? (int)o.IDPrograma : 0,
+                        idPrograma = o.IDprogram != null ? (int)o.IDprogram : 0,
+                        idArea = o.IDArea != null ? (int)o.IDArea : 0,
+                        antecedentes = o.OP_Antecendentes?.ToString() ?? "",
+                        observaciones = o.OP_Observaciones?.ToString() ?? "",
+                        acciones = o.OP_Acciones != null ? (int)o.OP_Acciones : 0,
+                        franja = o.Op_Franjafronteriza != null && (bool)o.Op_Franjafronteriza,
+                        idNivelMarginacion = o.IdNivelmarginacion != null ? (int)o.IdNivelmarginacion : 0,
+                        idAprima = o.IDaprima != null ? (int)o.IDaprima : 0
+                    });
+                }
+            }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
         // MÉTODOS PRIVADOS — Suma de Inversión (cascada)
         // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Importa en cascada desde BDconseochilonseguimiento:
+        /// acciones → fuentes de financiamiento → COCI → contrato
+        /// </summary>
+        private void ImportarCascada(SqlConnection conLocal, int idObraLocal, int idObraOrigen)
+        {
+            using (var conSeg = new SqlConnection(_connectionStringSeg))
+            {
+                conSeg.Open();
+
+                // 1. Obtener acciones del sistema origen
+                var accionesOrigen = conSeg.Query(@"
+                    SELECT A.IDAcciones, A.AC_Accion, A.OP_Año, A.IDañoobraproyecto,
+                           A.IDtipoejecucion, A.IDTipoaccion, A.IDSubRubroEspecifico,
+                           A.Dictamenconfuente, A.Autorizadasinrecurso, A.Liberada,
+                           A.Beneficiario, A.Tipobeneficiario,
+                           A.CveMunicipio, A.CveLocalidades, A.IDLocalidad,
+                           A.descripcionlocalidad, A.finalidad, A.funcion, A.subfuncion,
+                           A.programa, A.subprograma, A.proyecto
+                    FROM TblD_Acciones A
+                    WHERE A.IDobraproyecto = @id",
+                    new { id = idObraOrigen }).ToList();
+
+                foreach (var ac in accionesOrigen)
+                {
+                    int anioAc = ac.OP_Año != null ? (int)ac.OP_Año : 0;
+
+                    // 2. Asegurar registro en TBLD_añoobraproyecto
+                    var existeAnio = conLocal.ExecuteScalar<int>(
+                        "SELECT COUNT(*) FROM TBLD_añoobraproyecto WHERE IDobraproyecto=@id AND OP_Año=@anio",
+                        new { id = idObraLocal, anio = anioAc });
+
+                    int idAnioLocal = 0;
+                    if (existeAnio == 0)
+                    {
+                        idAnioLocal = conLocal.Query<int>(@"
+                            INSERT INTO TBLD_añoobraproyecto(IDobraproyecto, OP_Año, OP_InversionEstatal,
+                                OP_InversionFederal, OP_InversioMunicipal, OP_Continuidad, OP_Concepto)
+                            VALUES(@id, @anio, 0, 0, 0, 0, '');
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                            new { id = idObraLocal, anio = anioAc }).First();
+                    }
+                    else
+                    {
+                        idAnioLocal = conLocal.ExecuteScalar<int>(
+                            "SELECT IDañoobraproyecto FROM TBLD_añoobraproyecto WHERE IDobraproyecto=@id AND OP_Año=@anio",
+                            new { id = idObraLocal, anio = anioAc });
+                    }
+
+                    // 3. Insertar acción en BD local
+                    int idAccionLocal = conLocal.Query<int>(@"
+                        INSERT INTO TblD_Acciones(IDobraproyecto, IDañoobraproyecto, OP_Año,
+                            AC_Accion, IDtipoejecucion, IDTipoaccion, IDSubRubroEspecifico,
+                            Dictamenconfuente, Autorizadasinrecurso, Liberada,
+                            Beneficiario, Tipobeneficiario,
+                            CveMunicipio, CveLocalidades, IDLocalidad,
+                            descripcionlocalidad, finalidad, funcion, subfuncion,
+                            programa, subprograma, proyecto)
+                        VALUES(@obra, @idAnio, @anio,
+                            @accion, @tipoejecucion, @tipoaccion, @subRubroEsp,
+                            @dictamen, @autorizada, @liberada,
+                            @beneficiario, @tipoBeneficiario,
+                            @cveMun, @cveLoc, @idLoc,
+                            @descLoc, @finalidad, @funcion, @subfuncion,
+                            @programa, @subprograma, @proyecto);
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                        new
+                        {
+                            obra = idObraLocal,
+                            idAnio = idAnioLocal,
+                            anio = anioAc,
+                            accion = ac.AC_Accion?.ToString() ?? "",
+                            tipoejecucion = ac.IDtipoejecucion != null ? (int)ac.IDtipoejecucion : 1,
+                            tipoaccion = ac.IDTipoaccion,
+                            subRubroEsp = ac.IDSubRubroEspecifico,
+                            dictamen = ac.Dictamenconfuente != null && (bool)ac.Dictamenconfuente,
+                            autorizada = ac.Autorizadasinrecurso != null && (bool)ac.Autorizadasinrecurso,
+                            liberada = ac.Liberada != null && (bool)ac.Liberada,
+                            beneficiario = ac.Beneficiario,
+                            tipoBeneficiario = ac.Tipobeneficiario?.ToString() ?? "",
+                            cveMun = ac.CveMunicipio?.ToString() ?? "",
+                            cveLoc = ac.CveLocalidades?.ToString() ?? "",
+                            idLoc = ac.IDLocalidad,
+                            descLoc = ac.descripcionlocalidad?.ToString() ?? "",
+                            finalidad = ac.finalidad?.ToString() ?? "",
+                            funcion = ac.funcion?.ToString() ?? "",
+                            subfuncion = ac.subfuncion?.ToString() ?? "",
+                            programa = ac.programa?.ToString() ?? "",
+                            subprograma = ac.subprograma?.ToString() ?? "",
+                            proyecto = ac.proyecto?.ToString() ?? ""
+                        }).First();
+
+                    int idAccionOrigen = (int)ac.IDAcciones;
+
+                    // 4. Fuentes de financiamiento
+                    var fuentes = conSeg.Query(@"
+                        SELECT IdFuenteinversion, IdOrigenfuente, IDProgramafinanciamiento,
+                               FI_Inversion, Fechavencimiento
+                        FROM TBLD_Financiamientoinversion
+                        WHERE IDAcciones = @id",
+                        new { id = idAccionOrigen }).ToList();
+
+                    foreach (var f in fuentes)
+                    {
+                        DateTime? fechaVcto = null;
+                        if (f.Fechavencimiento != null)
+                            fechaVcto = (DateTime)f.Fechavencimiento;
+
+                        int idFuenteLocal = conLocal.Query<int>(@"
+                            INSERT INTO TBLD_Financiamientoinversion(IDAcciones, IDañoobraproyecto, OP_Año,
+                                IdOrigenfuente, IDProgramafinanciamiento, FI_Inversion, Fechavencimiento)
+                            VALUES(@idAcc, @idAnio, @anio, @origen, @prog, @inv, @vcto);
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                            new
+                            {
+                                idAcc = idAccionLocal,
+                                idAnio = idAnioLocal,
+                                anio = anioAc,
+                                origen = f.IdOrigenfuente,
+                                prog = f.IDProgramafinanciamiento,
+                                inv = f.FI_Inversion,
+                                vcto = fechaVcto
+                            }).First();
+
+                        // 5. COCI de esa fuente
+                        var cocis = conSeg.Query(@"
+                            SELECT Cvepresupuestal, Inversioncoci, Statuscoci, IDmovimiento, consecutivo
+                            FROM TblD_COCI
+                            WHERE IdFuenteinversion = @id",
+                            new { id = (int)f.IdFuenteinversion }).ToList();
+
+                        foreach (var c in cocis)
+                        {
+                            conLocal.Execute(@"
+                                INSERT INTO TblD_COCI(IdFuenteinversion, Cvepresupuestal,
+                                    Inversioncoci, Statuscoci, IDmovimiento, consecutivo)
+                                VALUES(@idF, @cve, @inv, @st, @mov, @cons)",
+                                new
+                                {
+                                    idF = idFuenteLocal,
+                                    cve = c.Cvepresupuestal?.ToString() ?? "",
+                                    inv = c.Inversioncoci,
+                                    st = c.Statuscoci?.ToString() ?? "CO",
+                                    mov = c.IDmovimiento,
+                                    cons = c.consecutivo
+                                });
+                        }
+                    }
+
+                    // 6. Recalcular inversiones por año
+                    SumaInversion(conLocal, idObraLocal, anioAc);
+
+                    // 7. Contrato de la acción (si tiene IDContrato asignado)
+                    if (ac.IDContrato != null && (int)ac.IDContrato > 0)
+                    {
+                        int idContratoOrigen = (int)ac.IDContrato;
+                        var contrato = conSeg.QueryFirstOrDefault(@"
+                            SELECT CON_Contrato, IDObraproyecto, IDContratista,
+                                   CON_Descripcion, CON_Firma, CON_Inicio, CON_Final,
+                                   CON_Montocontratado, CON_montoanticipo,
+                                   AvanceFinanciero, IDTipocontrato,
+                                   IDConceptocontratado, IDTipoorden
+                            FROM TBLD_Contrato
+                            WHERE IDContrato = @id",
+                            new { id = idContratoOrigen });
+
+                        if (contrato != null)
+                        {
+                            string numContrato = contrato.CON_Contrato?.ToString() ?? "";
+
+                            // Verificar si ya existe ese número de contrato en la BD local
+                            var idContratoLocal = conLocal.ExecuteScalar<int?>(
+                                "SELECT IDContrato FROM TBLD_Contrato WHERE CON_Contrato=@num AND IDObraproyecto=@obra",
+                                new { num = numContrato, obra = idObraLocal });
+
+                            if (idContratoLocal == null)
+                            {
+                                idContratoLocal = conLocal.Query<int>(@"
+                                    INSERT INTO TBLD_Contrato(IDObraproyecto, IDContratista,
+                                        CON_Contrato, CON_Descripcion, CON_Firma, CON_Inicio, CON_Final,
+                                        CON_Montocontratado, CON_montoanticipo,
+                                        AvanceFinanciero, IDTipocontrato, IDConceptocontratado, IDTipoorden)
+                                    VALUES(@obra, @contratista,
+                                        @numCon, @desc, @firma, @inicio, @fin,
+                                        @monto, @anticipo,
+                                        @avance, @tipocon, @concepto, @orden);
+                                    SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                                    new
+                                    {
+                                        obra = idObraLocal,
+                                        contratista = contrato.IDContratista,
+                                        numCon = numContrato,
+                                        desc = contrato.CON_Descripcion?.ToString() ?? "",
+                                        firma = contrato.CON_Firma,
+                                        inicio = contrato.CON_Inicio,
+                                        fin = contrato.CON_Final,
+                                        monto = contrato.CON_Montocontratado,
+                                        anticipo = contrato.CON_montoanticipo,
+                                        avance = contrato.AvanceFinanciero,
+                                        tipocon = contrato.IDTipocontrato,
+                                        concepto = contrato.IDConceptocontratado,
+                                        orden = contrato.IDTipoorden
+                                    }).First();
+                            }
+
+                            // Asignar contrato a la acción local
+                            conLocal.Execute(
+                                "UPDATE TblD_Acciones SET IDContrato=@idCon WHERE IDAcciones=@idAc",
+                                new { idCon = idContratoLocal, idAc = idAccionLocal });
+                        }
+                    }
+                }
+            }
+        }
 
         private void SumaInversion(SqlConnection con, int idobra, int anio)
         {

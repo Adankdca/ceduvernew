@@ -152,6 +152,73 @@
         <!-- BODY -->
         <div class="modal-body">
 
+            <!-- ══ PANEL: Importar desde Sistema de Seguimiento ══════════ -->
+            <div id="panelImportSeguimiento" class="mb-4">
+
+                <!-- Encabezado colapsable -->
+                <div class="d-flex align-items-center mb-2">
+                    <span class="font-weight-bold text-primary mr-2">
+                        <i class="fas fa-cloud-download-alt mr-1"></i> Importar desde el Sistema de Seguimiento
+                    </span>
+                    <small class="text-muted">(opcional — deja vacío para captura manual)</small>
+                </div>
+
+                <!-- Barra de búsqueda -->
+                <div class="row">
+                    <div class="col-md-5">
+                        <input type="text" id="txtBuscarSeg" class="form-control form-control-sm"
+                               placeholder="Núm. obra o nombre..." />
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" id="txtAnioBuscarSeg" class="form-control form-control-sm"
+                               placeholder="Año" min="2000" max="2100" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                                onclick="ObrasModule.buscarObrasSeguimiento()">
+                            <i class="fas fa-search mr-1"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid de resultados -->
+                <div id="divResultadosSeg" class="mt-2" style="display:none;">
+                    <div class="table-responsive" style="max-height:220px; overflow-y:auto;">
+                        <table class="table table-sm table-hover table-bordered mb-0" id="tblResultadosSeg">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Núm. obra</th>
+                                    <th>Nombre</th>
+                                    <th>Subrubro</th>
+                                    <th>Año</th>
+                                    <th class="text-center">Acc.</th>
+                                    <th class="text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyResultadosSeg"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Alerta amarilla: datos importados -->
+                <div id="alertaImportacion" class="alert alert-warning mt-2 mb-0 py-2 px-3" style="display:none;">
+                    <div id="alertaImportacionTexto"></div>
+                    <div class="mt-1">
+                        <a href="#" class="text-warning font-weight-bold mr-3"
+                           onclick="ObrasModule.elegirOtraObra(); return false;">
+                            <i class="fas fa-search mr-1"></i> Elegir otra obra
+                        </a>
+                        <a href="#" class="text-secondary"
+                           onclick="ObrasModule.quitarVinculo(); return false;">
+                            <i class="fas fa-unlink mr-1"></i> Quitar vínculo (capturar a mano)
+                        </a>
+                    </div>
+                </div>
+
+                <hr class="mt-3 mb-2" />
+            </div>
+            <!-- ══ FIN PANEL IMPORTAR ══════════════════════════════════════ -->
+
             <div class="row">
 
                 <!-- Número -->
@@ -245,6 +312,8 @@
 
         <!-- FOOTER -->
         <div class="modal-footer">
+            <!-- Campo oculto que guarda el vínculo con obra del sistema de seguimiento -->
+            <input type="hidden" id="hdnIdObraSeguimiento" value="0" />
             <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
             <button type="button" class="btn btn-primary" onclick="ObrasModule.guardarObra()">
                 <i class="fas fa-save mr-1"></i> Guardar
@@ -395,10 +464,6 @@
                                 <span class="badge badge-primary ml-2" id="badgeTotalAcciones">0</span>
                             </div>
                             <div class="card-toolbar">
-                                <select class="form-control form-control-sm mr-2" id="cboFiltroAnioAccion"
-                                        style="width:120px;">
-                                    <option value="">(TODOS)</option>
-                                </select>
                                 <button type="button" class="btn btn-success btn-sm"
                                         id="btnNuevaAccion">
                                     <i class="fas fa-plus mr-1"></i> Nueva Acción
