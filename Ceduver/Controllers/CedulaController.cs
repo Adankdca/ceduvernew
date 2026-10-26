@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web;
 using System.Web.Hosting;
+using System.Threading.Tasks;
 using System.Web.Http;
 using OfficeOpenXml;
 
@@ -525,7 +526,7 @@ namespace Ceduver.Controllers
                     AND COLUMN_NAME IN ('latitud_croquis','longuitud_croquis',
                         'latitud_foto1','longuitud_foto1','latitud_foto2','longuitud_foto2',
                         'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4',
-                        'supervisor')", connCheck);
+                        'supervisor','descripcion_visita')", connCheck);
                 using (var r = cmdCheck.ExecuteReader())
                     while (r.Read()) colsExistentes.Add(r.GetString(0).ToLower());
             }
@@ -590,7 +591,8 @@ namespace Ceduver.Controllers
                             latitudFoto3 = SafeStr(reader, "latitud_foto3"),
                             longuitudFoto3 = SafeStr(reader, "longuitud_foto3"),
                             latitudFoto4 = SafeStr(reader, "latitud_foto4"),
-                            longuitudFoto4 = SafeStr(reader, "longuitud_foto4")
+                            longuitudFoto4 = SafeStr(reader, "longuitud_foto4"),
+                            descripcionVisita = SafeStr(reader, "descripcion_visita")
                         });
                     }
                 }
@@ -615,10 +617,20 @@ namespace Ceduver.Controllers
                 if (!Directory.Exists(rutaFisica))
                     Directory.CreateDirectory(rutaFisica);
 
+                long _idSeguimiento = 0;
                 using (var conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
                     long idSeguimiento = 0;
+
+                    // Auto-migración: crear columnas nuevas si no existen
+                    var migraciones = new[]
+                    {
+                        "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='TBLP_cedulaseguimiento' AND COLUMN_NAME='supervisor') ALTER TABLE TBLP_cedulaseguimiento ADD supervisor NVARCHAR(200) NULL",
+                        "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='TBLP_cedulaseguimiento' AND COLUMN_NAME='descripcion_visita') ALTER TABLE TBLP_cedulaseguimiento ADD descripcion_visita NVARCHAR(2000) NULL",
+                    };
+                    foreach (var m in migraciones)
+                        new SqlCommand(m, conn).ExecuteNonQuery();
 
                     // Verificar columnas nuevas para INSERT/UPDATE dinámico
                     var colsNuevas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -627,7 +639,8 @@ namespace Ceduver.Controllers
                         WHERE TABLE_NAME = 'TBLP_cedulaseguimiento'
                         AND COLUMN_NAME IN ('supervisor','latitud_croquis','longuitud_croquis',
                             'latitud_foto1','longuitud_foto1','latitud_foto2','longuitud_foto2',
-                            'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4')", conn);
+                            'latitud_foto3','longuitud_foto3','latitud_foto4','longuitud_foto4',
+                            'descripcion_visita')", conn);
                     using (var rc = cmdColCheck.ExecuteReader())
                         while (rc.Read()) colsNuevas.Add(rc.GetString(0).ToLower());
 
@@ -744,13 +757,461 @@ namespace Ceduver.Controllers
                     GuardarFotoInicio(conn, httpRequest, "Foto2", "imgfoto2", "foto2", idSeguimiento, ruta, rutaFisica);
                     GuardarFotoInicio(conn, httpRequest, "Foto3", "imgfoto3", "foto3", idSeguimiento, ruta, rutaFisica);
                     GuardarFotoInicio(conn, httpRequest, "Foto4", "imgfoto4", "foto4", idSeguimiento, ruta, rutaFisica);
+
+                    _idSeguimiento = idSeguimiento;
                 }
 
+                return Ok(new { success = true, idSeguimiento = _idSeguimiento });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        // ─── PARTIDAS INICIO ──────────────────────────────────────────────────────
+
+        [HttpPost]
+        [Route("GuardarPartidasInicio")]
+        [AllowAnonymous]
+        public IHttpActionResult GuardarPartidasInicio([FromBody] GuardarPartidasRequest req)
+        {
+            if (req == null || req.IdSeguimiento <= 0)
+                return Ok(new { success = true }); // ignorar si no hay id
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Crear tabla si no existe
+                    var cmdCreate = new SqlCommand(@"
+                        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TBLP_cedula_partidas')
+                        BEGIN
+                            CREATE TABLE TBLP_cedula_partidas (
+                                idpartida     BIGINT IDENTITY(1,1) PRIMARY KEY,
+                                idseguimiento BIGINT NOT NULL,
+                                orden         INT NOT NULL DEFAULT 1,
+                                descripcion   NVARCHAR(2000) NULL,
+                                fechacreacion DATETIME DEFAULT GETDATE()
+                            )
+                        END", conn);
+                    cmdCreate.ExecuteNonQuery();
+
+                    // Borrar partidas existentes para este seguimiento y reinsertar
+                    var cmdDel = new SqlCommand("DELETE FROM TBLP_cedula_partidas WHERE idseguimiento = @id", conn);
+                    cmdDel.Parameters.AddWithValue("@id", req.IdSeguimiento);
+                    cmdDel.ExecuteNonQuery();
+
+                    if (req.Partidas != null)
+                    {
+                        foreach (var p in req.Partidas)
+                        {
+                            var cmdIns = new SqlCommand(@"
+                                INSERT INTO TBLP_cedula_partidas (idseguimiento, orden, descripcion)
+                                VALUES (@id, @orden, @desc)", conn);
+                            cmdIns.Parameters.AddWithValue("@id", req.IdSeguimiento);
+                            cmdIns.Parameters.AddWithValue("@orden", p.Orden);
+                            cmdIns.Parameters.AddWithValue("@desc", (object)p.Descripcion ?? DBNull.Value);
+                            cmdIns.ExecuteNonQuery();
+                        }
+                    }
+                }
                 return Ok(new { success = true });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet]
+        [Route("GetPartidasInicio/{idSeguimiento}")]
+        [AllowAnonymous]
+        public IHttpActionResult GetPartidasInicio(long idSeguimiento)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    // Si la tabla no existe devolver lista vacía
+                    var cmdCheck = new SqlCommand(@"
+                        SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = 'TBLP_cedula_partidas'", conn);
+                    if (Convert.ToInt32(cmdCheck.ExecuteScalar()) == 0)
+                        return Ok(new List<object>());
+
+                    var list = new List<object>();
+                    var cmd = new SqlCommand(@"
+                        SELECT idpartida, orden, descripcion
+                        FROM TBLP_cedula_partidas
+                        WHERE idseguimiento = @id
+                        ORDER BY orden", conn);
+                    cmd.Parameters.AddWithValue("@id", idSeguimiento);
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            list.Add(new
+                            {
+                                idPartida   = rdr["idpartida"],
+                                orden       = rdr["orden"],
+                                descripcion = rdr["descripcion"] == DBNull.Value ? "" : rdr["descripcion"].ToString()
+                            });
+                        }
+                    }
+                    return Ok(list);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GetPartidasConFotosSeg
+        // Devuelve las partidas de una acción junto con las fotos ya guardadas
+        // para un seguimiento concreto (idSeguimiento=0 => partidas sin fotos).
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpGet]
+        [Route("GetPartidasConFotosSeg")]
+        [AllowAnonymous]
+        public IHttpActionResult GetPartidasConFotosSeg(long idAcciones, long idSeguimiento = 0)
+        {
+            try
+            {
+                var cs = ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+                using (var conn = new SqlConnection(cs))
+                {
+                    conn.Open();
+
+                    // Auto-crear tabla de fotos si no existe
+                    const string ddl = @"
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='TBLP_cedula_partidas_fotos')
+CREATE TABLE TBLP_cedula_partidas_fotos (
+    idfoto          BIGINT IDENTITY(1,1) PRIMARY KEY,
+    idpartida       BIGINT NOT NULL,
+    idseguimiento   BIGINT NOT NULL,
+    numero_foto     INT NOT NULL,          -- 1 o 2
+    ruta_foto       NVARCHAR(500) NULL,
+    descripcion     NVARCHAR(1000) NULL,
+    latitud         NVARCHAR(50)  NULL,
+    longitud        NVARCHAR(50)  NULL,
+    fecha_registro  DATETIME DEFAULT GETDATE()
+)";
+                    new SqlCommand(ddl, conn).ExecuteNonQuery();
+
+                    // Obtener el idseguimiento del INICIO para buscar las partidas
+                    // Las partidas se guardaron en TBLP_cedula_partidas con el idseguimiento del registro tipo='I'
+                    long idSegInicio = 0;
+                    var cmdInicio = new SqlCommand(
+                        "SELECT TOP 1 idseguimiento FROM TBLP_cedulaseguimiento WHERE idacciones=@ia AND tipo_seguimiento='I'",
+                        conn);
+                    cmdInicio.Parameters.AddWithValue("@ia", idAcciones);
+                    var objInicio = cmdInicio.ExecuteScalar();
+                    if (objInicio != null && objInicio != DBNull.Value)
+                        idSegInicio = Convert.ToInt64(objInicio);
+
+                    if (idSegInicio == 0)
+                    {
+                        // Debug: verificar si existe algún registro de inicio para esta acción
+                        var cmdDebug = new SqlCommand(
+                            "SELECT COUNT(*) FROM TBLP_cedulaseguimiento WHERE IDAcciones=@ia", conn);
+                        cmdDebug.Parameters.AddWithValue("@ia", idAcciones);
+                        var totalReg = Convert.ToInt32(cmdDebug.ExecuteScalar());
+
+                        var cmdDebug2 = new SqlCommand(
+                            "SELECT TOP 5 idseguimiento, IDAcciones, tipo_seguimiento FROM TBLP_cedulaseguimiento WHERE IDAcciones=@ia", conn);
+                        cmdDebug2.Parameters.AddWithValue("@ia", idAcciones);
+                        var debugList = new System.Collections.Generic.List<string>();
+                        using (var rdrD = cmdDebug2.ExecuteReader())
+                            while (rdrD.Read())
+                                debugList.Add("id=" + rdrD["idseguimiento"] + " acc=" + rdrD["IDAcciones"] + " tipo=" + rdrD["tipo_seguimiento"]);
+
+                        return Ok(new {
+                            sinInicio = true,
+                            mensaje = "No se encontró registro tipo='I' para idAcciones=" + idAcciones + ". Total registros para esa acción: " + totalReg,
+                            registros = debugList
+                        });
+                    }
+
+                    // Traer partidas + fotos del seguimiento solicitado (LEFT JOIN)
+                    var sql = @"
+SELECT
+    p.idpartida,
+    p.orden,
+    p.descripcion,
+    f1.idfoto        AS idFoto1,
+    f1.ruta_foto     AS rutaFoto1,
+    f1.descripcion   AS descFoto1,
+    f1.latitud       AS latFoto1,
+    f1.longitud      AS lonFoto1,
+    f2.idfoto        AS idFoto2,
+    f2.ruta_foto     AS rutaFoto2,
+    f2.descripcion   AS descFoto2,
+    f2.latitud       AS latFoto2,
+    f2.longitud      AS lonFoto2
+FROM TBLP_cedula_partidas p
+LEFT JOIN TBLP_cedula_partidas_fotos f1
+       ON f1.idpartida=p.idpartida AND f1.idseguimiento=@idSeg AND f1.numero_foto=1
+LEFT JOIN TBLP_cedula_partidas_fotos f2
+       ON f2.idpartida=p.idpartida AND f2.idseguimiento=@idSeg AND f2.numero_foto=2
+WHERE p.idseguimiento=@idSegInicio
+ORDER BY p.orden";
+
+                    var cmd = new SqlCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("@idSeg", idSeguimiento > 0 ? (object)idSeguimiento : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@idSegInicio", idSegInicio);
+
+                    var list = new System.Collections.Generic.List<object>();
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            list.Add(new
+                            {
+                                idPartida   = rdr["idpartida"],
+                                orden       = rdr["orden"],
+                                descripcion = rdr["descripcion"] == DBNull.Value ? "" : rdr["descripcion"].ToString(),
+                                idFoto1     = rdr["idFoto1"]   == DBNull.Value ? 0 : Convert.ToInt64(rdr["idFoto1"]),
+                                rutaFoto1   = rdr["rutaFoto1"] == DBNull.Value ? "" : rdr["rutaFoto1"].ToString(),
+                                descFoto1   = rdr["descFoto1"] == DBNull.Value ? "" : rdr["descFoto1"].ToString(),
+                                latFoto1    = rdr["latFoto1"]  == DBNull.Value ? "" : rdr["latFoto1"].ToString(),
+                                lonFoto1    = rdr["lonFoto1"]  == DBNull.Value ? "" : rdr["lonFoto1"].ToString(),
+                                idFoto2     = rdr["idFoto2"]   == DBNull.Value ? 0 : Convert.ToInt64(rdr["idFoto2"]),
+                                rutaFoto2   = rdr["rutaFoto2"] == DBNull.Value ? "" : rdr["rutaFoto2"].ToString(),
+                                descFoto2   = rdr["descFoto2"] == DBNull.Value ? "" : rdr["descFoto2"].ToString(),
+                                latFoto2    = rdr["latFoto2"]  == DBNull.Value ? "" : rdr["latFoto2"].ToString(),
+                                lonFoto2    = rdr["lonFoto2"]  == DBNull.Value ? "" : rdr["lonFoto2"].ToString(),
+                            });
+                        }
+                    }
+                    return Ok(list);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("GetPartidasConFotosSeg: " + ex.Message);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GuardarFotosPartidasSeg
+        // Recibe multipart/form-data con metadatos + archivos de fotos por partida.
+        // Inserta o actualiza TBLP_cedula_partidas_fotos.
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost]
+        [Route("GuardarFotosPartidasSeg")]
+        [AllowAnonymous]
+        public async Task<IHttpActionResult> GuardarFotosPartidasSeg()
+        {
+            try
+            {
+                if (!Request.Content.IsMimeMultipartContent())
+                    return BadRequest("Se esperaba multipart/form-data");
+
+                // Asegurar carpeta ANTES de instanciar el provider
+                var uploadsRootPre = System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads/Partidas/");
+                if (!System.IO.Directory.Exists(uploadsRootPre))
+                    System.IO.Directory.CreateDirectory(uploadsRootPre);
+
+                var provider = new MultipartFormDataStreamProvider(uploadsRootPre);
+                await Request.Content.ReadAsMultipartAsync(provider);
+
+                var form = provider.FormData;
+                long idSeguimiento = 0;
+                long.TryParse(form["IdSeguimiento"], out idSeguimiento);
+                if (idSeguimiento == 0)
+                    return BadRequest("IdSeguimiento requerido");
+
+                var cs = ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+                using (var conn = new SqlConnection(cs))
+                {
+                    conn.Open();
+
+                    // Asegurarse que la tabla existe
+                    const string ddl = @"
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='TBLP_cedula_partidas_fotos')
+CREATE TABLE TBLP_cedula_partidas_fotos (
+    idfoto          BIGINT IDENTITY(1,1) PRIMARY KEY,
+    idpartida       BIGINT NOT NULL,
+    idseguimiento   BIGINT NOT NULL,
+    numero_foto     INT NOT NULL,
+    ruta_foto       NVARCHAR(500) NULL,
+    descripcion     NVARCHAR(1000) NULL,
+    latitud         NVARCHAR(50)  NULL,
+    longitud        NVARCHAR(50)  NULL,
+    fecha_registro  DATETIME DEFAULT GETDATE()
+)";
+                    new SqlCommand(ddl, conn).ExecuteNonQuery();
+
+                    var uploadsRoot = uploadsRootPre; // carpeta ya creada arriba
+
+                    // Procesar partidas: Partidas[0].IdPartida, Partidas[0].Foto1Desc, etc.
+                    var idx = 0;
+                    while (form["Partidas[" + idx + "].IdPartida"] != null)
+                    {
+                        long idPartida = 0;
+                        long.TryParse(form["Partidas[" + idx + "].IdPartida"], out idPartida);
+
+                        for (int nf = 1; nf <= 2; nf++)
+                        {
+                            var desc = form["Partidas[" + idx + "].Foto" + nf + "Desc"] ?? "";
+                            var lat  = form["Partidas[" + idx + "].Foto" + nf + "Lat"]  ?? "";
+                            var lon  = form["Partidas[" + idx + "].Foto" + nf + "Lon"]  ?? "";
+
+                            // Buscar archivo subido (clave: Partidas[idx].ArchivoFotoN)
+                            string nuevaRuta = null;
+                            var fileKey = "Partidas[" + idx + "].ArchivoFoto" + nf;
+                            var fileData = provider.FileData.FirstOrDefault(f =>
+                                f.Headers.ContentDisposition.Name.Trim('"') == fileKey);
+
+                            if (fileData != null)
+                            {
+                                // Intentar obtener extensión del nombre original del archivo
+                                var originalName = (fileData.Headers.ContentDisposition.FileName ?? "").Trim('"').Trim();
+                                var ext = System.IO.Path.GetExtension(originalName);
+                                // Si no se pudo, intentar por el Content-Type
+                                if (string.IsNullOrEmpty(ext))
+                                {
+                                    var ct = fileData.Headers.ContentType != null ? fileData.Headers.ContentType.MediaType : "";
+                                    if (ct == "image/png") ext = ".png";
+                                    else if (ct == "image/gif") ext = ".gif";
+                                    else if (ct == "image/webp") ext = ".webp";
+                                    else ext = ".jpg"; // default jpeg
+                                }
+                                var nombreFinal = "p" + idPartida + "_s" + idSeguimiento + "_f" + nf
+                                                  + "_" + DateTime.Now.Ticks + ext;
+                                var destino = System.IO.Path.Combine(uploadsRoot, nombreFinal);
+                                System.IO.File.Move(fileData.LocalFileName, destino);
+                                nuevaRuta = "~/Uploads/Partidas/" + nombreFinal;
+                            }
+
+                            // ¿Ya existe registro para esta partida+seguimiento+nFoto?
+                            var cmdExiste = new SqlCommand(
+                                "SELECT idfoto, ruta_foto FROM TBLP_cedula_partidas_fotos WHERE idpartida=@p AND idseguimiento=@s AND numero_foto=@n",
+                                conn);
+                            cmdExiste.Parameters.AddWithValue("@p", idPartida);
+                            cmdExiste.Parameters.AddWithValue("@s", idSeguimiento);
+                            cmdExiste.Parameters.AddWithValue("@n", nf);
+
+                            long idFotoExistente = 0;
+                            string rutaExistente = null;
+                            using (var rdr = cmdExiste.ExecuteReader())
+                            {
+                                if (rdr.Read())
+                                {
+                                    idFotoExistente = Convert.ToInt64(rdr["idfoto"]);
+                                    rutaExistente = rdr["ruta_foto"] == DBNull.Value ? null : rdr["ruta_foto"].ToString();
+                                }
+                            }
+
+                            var rutaFinal = nuevaRuta ?? rutaExistente ?? "";
+
+                            if (idFotoExistente > 0)
+                            {
+                                // UPDATE — solo actualizar ruta si llegó archivo nuevo
+                                var sqlUpd = nuevaRuta != null
+                                    ? "UPDATE TBLP_cedula_partidas_fotos SET ruta_foto=@r, descripcion=@d, latitud=@lat, longitud=@lon WHERE idfoto=@id"
+                                    : "UPDATE TBLP_cedula_partidas_fotos SET descripcion=@d, latitud=@lat, longitud=@lon WHERE idfoto=@id";
+                                var cmdUpd = new SqlCommand(sqlUpd, conn);
+                                if (nuevaRuta != null) cmdUpd.Parameters.AddWithValue("@r", rutaFinal);
+                                cmdUpd.Parameters.AddWithValue("@d", desc);
+                                cmdUpd.Parameters.AddWithValue("@lat", lat);
+                                cmdUpd.Parameters.AddWithValue("@lon", lon);
+                                cmdUpd.Parameters.AddWithValue("@id", idFotoExistente);
+                                cmdUpd.ExecuteNonQuery();
+                            }
+                            else if (!string.IsNullOrEmpty(rutaFinal) || !string.IsNullOrEmpty(desc) || !string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
+                            {
+                                // INSERT nuevo registro
+                                var cmdIns = new SqlCommand(@"
+INSERT INTO TBLP_cedula_partidas_fotos (idpartida, idseguimiento, numero_foto, ruta_foto, descripcion, latitud, longitud)
+VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
+                                cmdIns.Parameters.AddWithValue("@p", idPartida);
+                                cmdIns.Parameters.AddWithValue("@s", idSeguimiento);
+                                cmdIns.Parameters.AddWithValue("@n", nf);
+                                cmdIns.Parameters.AddWithValue("@r", string.IsNullOrEmpty(rutaFinal) ? (object)DBNull.Value : rutaFinal);
+                                cmdIns.Parameters.AddWithValue("@d", desc);
+                                cmdIns.Parameters.AddWithValue("@lat", lat);
+                                cmdIns.Parameters.AddWithValue("@lon", lon);
+                                cmdIns.ExecuteNonQuery();
+                            }
+                        }
+                        idx++;
+                    }
+
+                    // Limpiar archivos temporales no usados
+                    foreach (var fd in provider.FileData)
+                    {
+                        if (System.IO.File.Exists(fd.LocalFileName))
+                            System.IO.File.Delete(fd.LocalFileName);
+                    }
+                }
+                return ResponseMessage(Request.CreateResponse(
+                    System.Net.HttpStatusCode.OK,
+                    new { success = true },
+                    Configuration.Formatters.JsonFormatter));
+            }
+            catch (Exception ex)
+            {
+                return ResponseMessage(Request.CreateResponse(
+                    System.Net.HttpStatusCode.BadRequest,
+                    "GuardarFotosPartidasSeg: " + ex.Message,
+                    Configuration.Formatters.JsonFormatter));
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // EliminarFotoPartida
+        // Elimina el registro de foto de una partida para un seguimiento.
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost]
+        [Route("EliminarFotoPartida")]
+        [AllowAnonymous]
+        public IHttpActionResult EliminarFotoPartida([FromBody] EliminarFotoPartidaRequest req)
+        {
+            try
+            {
+                var cs = ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+                using (var conn = new SqlConnection(cs))
+                {
+                    conn.Open();
+                    // Obtener ruta para borrar archivo
+                    var cmdGet = new SqlCommand(
+                        "SELECT ruta_foto FROM TBLP_cedula_partidas_fotos WHERE idpartida=@p AND idseguimiento=@s AND numero_foto=@n",
+                        conn);
+                    cmdGet.Parameters.AddWithValue("@p", req.IdPartida);
+                    cmdGet.Parameters.AddWithValue("@s", req.IdSeguimiento);
+                    cmdGet.Parameters.AddWithValue("@n", req.NumeroFoto);
+                    var rutaObj = cmdGet.ExecuteScalar();
+                    if (rutaObj != null && rutaObj != DBNull.Value)
+                    {
+                        var ruta = rutaObj.ToString();
+                        if (ruta.StartsWith("~/"))
+                        {
+                            var fullPath = System.Web.Hosting.HostingEnvironment.MapPath(ruta);
+                            if (System.IO.File.Exists(fullPath))
+                                System.IO.File.Delete(fullPath);
+                        }
+                    }
+                    // Eliminar registro
+                    var cmdDel = new SqlCommand(
+                        "DELETE FROM TBLP_cedula_partidas_fotos WHERE idpartida=@p AND idseguimiento=@s AND numero_foto=@n",
+                        conn);
+                    cmdDel.Parameters.AddWithValue("@p", req.IdPartida);
+                    cmdDel.Parameters.AddWithValue("@s", req.IdSeguimiento);
+                    cmdDel.Parameters.AddWithValue("@n", req.NumeroFoto);
+                    cmdDel.ExecuteNonQuery();
+                }
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("EliminarFotoPartida: " + ex.Message);
             }
         }
 
@@ -785,7 +1246,8 @@ namespace Ceduver.Controllers
                 { "latitud_foto3",      "LatFoto3" },
                 { "longuitud_foto3",    "LonFoto3" },
                 { "latitud_foto4",      "LatFoto4" },
-                { "longuitud_foto4",    "LonFoto4" }
+                { "longuitud_foto4",    "LonFoto4" },
+                { "descripcion_visita", "DescripcionVisita" }
             };
             return map.TryGetValue(col, out var v) ? v : col;
         }
@@ -1178,7 +1640,7 @@ namespace Ceduver.Controllers
                     }
                 }
 
-                return Ok(new { success = true });
+                return Ok(new { success = true, idSeguimiento = idSeguimiento });
             }
             catch (Exception ex)
             {
@@ -2786,8 +3248,9 @@ namespace Ceduver.Controllers
 <title>Cédula de Verificación de Inicio</title>
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  html, body {{ width: 100%; }}
+  html, body {{ margin: 0; padding: 0; }}
   body {{ font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; }}
+  .doc-wrapper {{ width: 100%; }}
 
   /* ══ BARRAS de color ══ */
   .hdr-bar  {{ background: #c0392b; height: 8px; width: 100%; display: block; }}
@@ -2808,11 +3271,7 @@ namespace Ceduver.Controllers
   }}
 
   /* ══ PIE DE PÁGINA ══ */
-  .footer-fixed {{ width: 100%; }}
-  .footer-text {{
-    text-align: center; font-size: 10px; color: #555;
-    padding: 5px 0; background: #fff;
-  }}
+  .footer-fixed {{ width: 100%; line-height: 0; }}
 
   /* ══ Cuerpo del documento ══ */
   .page {{ max-width: 820px; margin: 0 auto; padding: 0 24px 24px; }}
@@ -2850,7 +3309,7 @@ namespace Ceduver.Controllers
 
   /* Cada foto: wrapper centrado */
   .foto-bloque {{
-    margin: 0 auto 28px auto;
+    margin: 16px auto 28px auto;
     page-break-inside: avoid;
     width: fit-content;
     max-width: 100%;
@@ -2892,13 +3351,36 @@ namespace Ceduver.Controllers
   /* ══ PRINT ══ */
   @media print {{
     .no-print {{ display: none !important; }}
-    html, body {{ margin: 0; padding: 0;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    @page {{ margin: 0; }}
+    html, body {{
+      margin: 0; padding: 0;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }}
+    /* Encabezado fijo — se repite en cada página */
+    .hdr-fixed {{
+      position: fixed;
+      top: 0; left: 0; right: 0; width: 100%;
+      background: #fff;
+      z-index: 999;
+    }}
+    /* Pie fijo — se repite en cada página */
+    .footer-fixed {{
+      position: fixed;
+      bottom: 0; left: 0; right: 0; width: 100%;
+      background: #fff;
+      z-index: 999;
+    }}
+    /* Espacios para que el contenido no quede tapado */
+    .page {{
+      margin-top: 130px;
+      margin-bottom: 95px;
+    }}
     .foto-bloque {{ page-break-inside: avoid; }}
   }}
 </style>
 </head>
 <body>
+<div class='doc-wrapper'>
 
 <!-- Botón imprimir (solo pantalla) -->
 <div class='no-print'>
@@ -2907,7 +3389,6 @@ namespace Ceduver.Controllers
 
 <!-- ═══ ENCABEZADO ═══ -->
 <div class='hdr-fixed'>
-  <div class='hdr-bar'></div>
   <div class='hdr-gold'></div>
   <div class='hdr-inner'>
     <div class='hdr-logo'>
@@ -2954,17 +3435,29 @@ namespace Ceduver.Controllers
 
 </div>
 
-<!-- ═══ PIE DE PÁGINA ═══ -->
+<!-- ═══ PIE DE PÁGINA con curva ═══ -->
 <div class='footer-fixed'>
-  <div class='hdr-bar'></div>
-  <div class='hdr-gold'></div>
-  <div class='footer-text'>
-    PALACIO MUNICIPAL S/N. COL. CENTRO, CHILÓN, CHIAPAS. C.P. 29940 / TEL: (919) 67 101 15
-  </div>
-  <div class='hdr-gold'></div>
-  <div class='hdr-bar'></div>
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 90'
+       style='display:block; width:100%; height:90px;' preserveAspectRatio='none'>
+    <!-- Sombra/borde dorado: misma curva pero 5px más arriba y más gruesa -->
+    <path d='M0,15 Q225,0 450,15 Q675,30 900,15 L900,90 L0,90 Z' fill='#d4ac0d'/>
+    <!-- Forma roja encima, con 5px de margen para que se vea el dorado como borde -->
+    <path d='M0,20 Q225,5 450,20 Q675,35 900,20 L900,90 L0,90 Z' fill='#c0392b'/>
+    <!-- Texto -->
+    <text x='450' y='52' text-anchor='middle'
+          font-family='Arial,sans-serif' font-size='13' font-weight='bold'
+          fill='white' letter-spacing='0.5'>
+      PALACIO MUNICIPAL S/N. COL. CENTRO, CHILÓN, CHIAPAS. C.P. 29940
+    </text>
+    <text x='450' y='71' text-anchor='middle'
+          font-family='Arial,sans-serif' font-size='12'
+          fill='white'>
+      TEL: (919) 67 101 15
+    </text>
+  </svg>
 </div>
 
+</div><!-- /doc-wrapper -->
 </body>
 </html>";
 
@@ -2984,5 +3477,532 @@ namespace Ceduver.Controllers
             }
         }
         #endregion
+    }
+
+    // ─── DTOs para partidas ───────────────────────────────────────────────────
+    public class PartidaDto
+    {
+        public int Orden { get; set; }
+        public string Descripcion { get; set; }
+    }
+
+    public class GuardarPartidasRequest
+    {
+        public long IdSeguimiento { get; set; }
+        public List<PartidaDto> Partidas { get; set; }
+    }
+
+    // ─── DTO para eliminar foto de partida ────────────────────────────────────
+    public class EliminarFotoPartidaRequest
+    {
+        public long IdSeguimiento { get; set; }
+        public long IdPartida     { get; set; }
+        public int  NumeroFoto    { get; set; }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  REPORTE SEGUIMIENTO — endpoint separado del ApiController para devolver HTML
+// ════════════════════════════════════════════════════════════════════════════════
+namespace Ceduver.Controllers
+{
+    using System.Text;
+
+    [RoutePrefix("api/Cedula")]
+    public class ReporteSeguimientoController : System.Web.Http.ApiController
+    {
+        private string _cs  = System.Configuration.ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+
+        [System.Web.Http.HttpGet]
+        [System.Web.Http.Route("ReporteSeguimiento/{idSeguimiento}")]
+        public System.Net.Http.HttpResponseMessage ReporteSeguimiento(long idSeguimiento)
+        {
+            try
+            {
+                // ── 1. Datos del seguimiento + acción + contrato ──────────────────
+                dynamic seg    = null;
+                dynamic accion = null;
+                dynamic contrato = null;
+
+                using (var conn = new System.Data.SqlClient.SqlConnection(_cs))
+                {
+                    conn.Open();
+
+                    // Seguimiento actual — para obtener IDAcciones, IDobraproyecto, tipo
+                    var cmdSeg = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT TOP 1 idseguimiento, IDAcciones, IDobraproyecto,
+                               descripcionobra, tipo_seguimiento,
+                               latitud, longuitud, direccion, referencia
+                        FROM TBLP_cedulaseguimiento
+                        WHERE idseguimiento = @id", conn);
+                    cmdSeg.Parameters.AddWithValue("@id", idSeguimiento);
+                    using (var r = cmdSeg.ExecuteReader())
+                    {
+                        if (r.Read())
+                            seg = new {
+                                idSeguimiento  = r["idseguimiento"],
+                                idAcciones     = r["IDAcciones"],
+                                idObraproyecto = r["IDobraproyecto"],
+                                descripcionObra= r["descripcionobra"] != DBNull.Value ? r["descripcionobra"].ToString() : "",
+                                tipoSeg        = r["tipo_seguimiento"].ToString(),
+                                latitud        = r["latitud"]   != DBNull.Value ? r["latitud"].ToString()   : "",
+                                longitud       = r["longuitud"] != DBNull.Value ? r["longuitud"].ToString() : "",
+                                direccion      = r["direccion"] != DBNull.Value ? r["direccion"].ToString() : "",
+                                referencia     = r["referencia"]!= DBNull.Value ? r["referencia"].ToString(): ""
+                            };
+                    }
+                    if (seg == null)
+                        return MsgError("Seguimiento no encontrado: " + idSeguimiento);
+
+                    // Leer latitud/longitud/direccion/referencia SIEMPRE del registro tipo='I'
+                    // porque esos datos solo se capturan en el inicio de obra
+                    if (seg.tipoSeg != "I")
+                    {
+                        long idAccTemp = Convert.ToInt64(seg.idAcciones);
+                        var cmdIni = new System.Data.SqlClient.SqlCommand(@"
+                            SELECT TOP 1 latitud, longuitud, direccion, referencia
+                            FROM TBLP_cedulaseguimiento
+                            WHERE IDAcciones = @ia AND tipo_seguimiento = 'I'", conn);
+                        cmdIni.Parameters.AddWithValue("@ia", idAccTemp);
+                        using (var ri = cmdIni.ExecuteReader())
+                        {
+                            if (ri.Read())
+                                seg = new {
+                                    idSeguimiento  = seg.idSeguimiento,
+                                    idAcciones     = seg.idAcciones,
+                                    idObraproyecto = seg.idObraproyecto,
+                                    descripcionObra= seg.descripcionObra,
+                                    tipoSeg        = seg.tipoSeg,
+                                    latitud        = ri["latitud"]   != DBNull.Value ? ri["latitud"].ToString()   : "",
+                                    longitud       = ri["longuitud"] != DBNull.Value ? ri["longuitud"].ToString() : "",
+                                    direccion      = ri["direccion"] != DBNull.Value ? ri["direccion"].ToString() : "",
+                                    referencia     = ri["referencia"]!= DBNull.Value ? ri["referencia"].ToString(): ""
+                                };
+                        }
+                    }
+
+                    long idAcc  = Convert.ToInt64(seg.idAcciones);
+                    long idObra = Convert.ToInt64(seg.idObraproyecto);
+
+                    // Acción + Obra
+                    var cmdAcc = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT A.IDAcciones, A.AC_Accion, A.AC_Descripcionaccion,
+                               A.Latitud, A.Logintud,
+                               A.MNP_Nombre, A.LCL_Nombre, A.descripcionlocalidad,
+                               A.IDContrato,
+                               P.OP_NombreObra
+                        FROM TblD_Acciones A
+                        INNER JOIN TBLP_Obraproyecto P ON A.IDobraproyecto = P.IDobraproyecto
+                        WHERE A.IDAcciones = @id", conn);
+                    cmdAcc.Parameters.AddWithValue("@id", idAcc);
+                    using (var r = cmdAcc.ExecuteReader())
+                    {
+                        if (r.Read())
+                            accion = new {
+                                accion          = r["AC_Accion"] != DBNull.Value ? r["AC_Accion"].ToString() : "",
+                                descripcion     = r["AC_Descripcionaccion"] != DBNull.Value ? r["AC_Descripcionaccion"].ToString() : "",
+                                latitud         = r["Latitud"] != DBNull.Value ? r["Latitud"].ToString() : "",
+                                longitud        = r["Logintud"] != DBNull.Value ? r["Logintud"].ToString() : "",
+                                municipio       = r["MNP_Nombre"] != DBNull.Value ? r["MNP_Nombre"].ToString() : "",
+                                localidad       = r["LCL_Nombre"] != DBNull.Value ? r["LCL_Nombre"].ToString() : "",
+                                descLocalidad   = r["descripcionlocalidad"] != DBNull.Value ? r["descripcionlocalidad"].ToString() : "",
+                                idContrato      = r["IDContrato"] != DBNull.Value ? r["IDContrato"].ToString() : "0",
+                                nombreObra      = r["OP_NombreObra"] != DBNull.Value ? r["OP_NombreObra"].ToString() : ""
+                            };
+                    }
+                    if (accion == null)
+                        return MsgError("No se encontró la acción para el seguimiento.");
+
+                    // Contrato
+                    if (!string.IsNullOrEmpty(accion.idContrato) && accion.idContrato != "0")
+                    {
+                        var cmdCon = new System.Data.SqlClient.SqlCommand(@"
+                            SELECT CON_Contrato,
+                                   CONVERT(varchar,CON_Inicio,103) as CON_Inicio,
+                                   CONVERT(varchar,CON_Final,103)  as CON_Final,
+                                   CON_Montocontratado
+                            FROM TBLD_Contrato WHERE IDContrato = @id", conn);
+                        cmdCon.Parameters.AddWithValue("@id", Convert.ToInt64(accion.idContrato));
+                        using (var r = cmdCon.ExecuteReader())
+                        {
+                            if (r.Read())
+                                contrato = new {
+                                    folio  = r["CON_Contrato"] != DBNull.Value ? r["CON_Contrato"].ToString() : "",
+                                    inicio = r["CON_Inicio"]   != DBNull.Value ? r["CON_Inicio"].ToString()   : "",
+                                    fin    = r["CON_Final"]    != DBNull.Value ? r["CON_Final"].ToString()    : "",
+                                    monto  = r["CON_Montocontratado"] != DBNull.Value
+                                             ? Convert.ToDecimal(r["CON_Montocontratado"])
+                                             : 0m
+                                };
+                        }
+                    }
+                    if (contrato == null)
+                        contrato = new { folio = "", inicio = "", fin = "", monto = 0m };
+
+                    // ── 2. Partidas del seguimiento inicio (tipo='I') ─────────────
+                    long idSegInicio = idSeguimiento;
+                    var cmdSI = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT TOP 1 idseguimiento FROM TBLP_cedulaseguimiento
+                        WHERE IDAcciones=@ia AND tipo_seguimiento='I'", conn);
+                    cmdSI.Parameters.AddWithValue("@ia", idAcc);
+                    var siObj = cmdSI.ExecuteScalar();
+                    if (siObj != null) idSegInicio = Convert.ToInt64(siObj);
+
+                    var partidas = new System.Collections.Generic.List<dynamic>();
+                    var cmdPart = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT p.idpartida, p.orden, p.descripcion
+                        FROM TBLP_cedula_partidas p
+                        WHERE p.idseguimiento = @isi
+                        ORDER BY p.orden", conn);
+                    cmdPart.Parameters.AddWithValue("@isi", idSegInicio);
+                    using (var r = cmdPart.ExecuteReader())
+                    {
+                        while (r.Read())
+                            partidas.Add(new {
+                                idPartida   = Convert.ToInt64(r["idpartida"]),
+                                orden       = r["orden"] != DBNull.Value ? Convert.ToInt32(r["orden"]) : 0,
+                                descripcion = r["descripcion"] != DBNull.Value ? r["descripcion"].ToString() : ""
+                            });
+                    }
+
+                    // ── 3. Fotos de cada partida para este seguimiento ─────────────
+                    var fotos = new System.Collections.Generic.Dictionary<long,
+                                    System.Collections.Generic.List<dynamic>>();
+                    if (partidas.Count > 0)
+                    {
+                        var ids = string.Join(",", partidas.Select(p => p.idPartida.ToString()));
+                        var cmdFoto = new System.Data.SqlClient.SqlCommand(@"
+                            SELECT idpartida, numero_foto, ruta_foto, descripcion, latitud, longitud
+                            FROM TBLP_cedula_partidas_fotos
+                            WHERE idseguimiento = @is AND idpartida IN (" + ids + @")
+                            ORDER BY idpartida, numero_foto", conn);
+                        cmdFoto.Parameters.AddWithValue("@is", idSeguimiento);
+                        using (var r = cmdFoto.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                long pid = Convert.ToInt64(r["idpartida"]);
+                                if (!fotos.ContainsKey(pid))
+                                    fotos[pid] = new System.Collections.Generic.List<dynamic>();
+                                fotos[pid].Add(new {
+                                    numFoto     = Convert.ToInt32(r["numero_foto"]),
+                                    ruta        = r["ruta_foto"] != DBNull.Value ? r["ruta_foto"].ToString() : "",
+                                    descripcion = r["descripcion"] != DBNull.Value ? r["descripcion"].ToString() : "",
+                                    latitud     = r["latitud"] != DBNull.Value ? r["latitud"].ToString() : "",
+                                    longitud    = r["longitud"] != DBNull.Value ? r["longitud"].ToString() : ""
+                                });
+                            }
+                        }
+                    }
+
+                    // ── 4. Construir HTML ─────────────────────────────────────────
+                    string tipoLabel = seg.tipoSeg == "I" ? "INICIO" : (seg.tipoSeg == "F" ? "FINAL" : "SEGUIMIENTO");
+                    string monto     = ((decimal)contrato.monto).ToString("C2", new System.Globalization.CultureInfo("es-MX"));
+                    string fechaGen  = DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-MX"));
+                    string nombreObra = (accion.nombreObra + " " + accion.accion).Trim();
+
+                    // Helper para convertir ruta ~/Uploads/... → URL web /Uploads/...
+                    Func<string,string> toUrl = (ruta) => {
+                        var u = (ruta ?? "").Trim();
+                        if (u.StartsWith("~/")) u = u.Substring(2);
+                        if (u.Length > 0 && u[0] != '/') u = "/" + u;
+                        return u;
+                    };
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine("<!DOCTYPE html><html lang='es'><head>");
+                    sb.AppendLine("<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>");
+                    sb.AppendLine("<title>Reporte de Seguimiento</title>");
+                    sb.AppendLine(@"<style>
+/* Color principal: verde institucional del logo de Chilón */
+:root {
+    --c-primary:   #1a6b3a;
+    --c-primary2:  #145530;
+    --c-accent:    #e8a020;
+    --c-light:     #eef6f1;
+    --c-border:    #c3dccb;
+    --c-text:      #0f2d1a;
+    --c-muted:     #5a7a65;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222; background: #f0f4f2; }
+@media print {
+    @page { margin: 10mm 12mm; size: letter; }
+    /* Elimina encabezado y pie de página del navegador (fecha, URL, título) */
+    html { -webkit-print-color-adjust: exact; }
+    head { display: none; }
+    body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    .no-print { display: none !important; }
+    .badge-tipo { display: none !important; }
+    .page { box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; max-width: 100% !important; }
+    .partida-card { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .header { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .header-strip { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .obra-nombre { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .info-title { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .partida-header { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .partida-num { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .seccion-foto-titulo { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .footer { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+.page {
+    max-width: 900px; margin: 20px auto; background: #fff;
+    border-radius: 8px; box-shadow: 0 2px 16px rgba(0,0,0,.12);
+    overflow: hidden;
+}
+/* ── ENCABEZADO ── */
+.header {
+    background: linear-gradient(135deg, var(--c-primary2) 0%, var(--c-primary) 60%, var(--c-primary2) 100%);
+    color: #fff; padding: 0;
+}
+.header-inner { display: flex; align-items: center; padding: 18px 28px; gap: 20px; }
+.header-logos { display: flex; gap: 12px; align-items: center; }
+.header-logos img { height: 72px; width: auto; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
+.header-text { flex: 1; text-align: center; }
+.header-text .ayuntamiento { font-size: 15px; font-weight: 700; letter-spacing: .5px; line-height: 1.3; text-transform: uppercase; }
+.header-text .periodo { font-size: 12px; margin-top: 4px; opacity: .88; }
+.header-strip {
+    background: var(--c-accent); color: #fff; text-align: center;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    padding: 6px 20px; text-transform: uppercase;
+}
+/* ── CUERPO ── */
+.body { padding: 12px 24px; }
+.badge-tipo {
+    display: inline-block; background: var(--c-primary); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 2px 10px; border-radius: 20px; margin-bottom: 10px;
+    text-transform: uppercase;
+}
+/* Info principal */
+.info-card {
+    background: var(--c-light); border: 1px solid var(--c-border); border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 10px;
+}
+.info-title {
+    font-size: 10px; font-weight: 700; color: var(--c-primary);
+    text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
+    border-bottom: 2px solid var(--c-primary); padding-bottom: 3px;
+}
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+.info-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.info-item label { display: block; font-size: 10px; color: var(--c-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 1px; }
+.info-item .val { font-size: 12px; font-weight: 500; color: var(--c-text); }
+.info-item.span2 { grid-column: span 2; }
+.info-item.span3 { grid-column: span 3; }
+/* Nombre obra grande */
+.obra-nombre {
+    background: var(--c-primary); color: #fff;
+    border-radius: 6px; padding: 10px 16px; margin-bottom: 10px;
+}
+.obra-nombre label { font-size: 10px; font-weight: 700; letter-spacing: .8px; opacity: .8; text-transform: uppercase; }
+.obra-nombre .val { font-size: 13px; font-weight: 700; margin-top: 3px; }
+/* Reporte fotográfico */
+.seccion-foto-titulo {
+    background: var(--c-primary2); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; padding: 6px 14px;
+    border-radius: 6px; margin: 10px 0 8px;
+}
+.partida-card {
+    border: 1px solid var(--c-border); border-radius: 6px;
+    margin-bottom: 10px; overflow: hidden;
+    page-break-inside: avoid; break-inside: avoid;
+}
+.partida-header {
+    background: var(--c-light); border-bottom: 1px solid var(--c-border);
+    padding: 7px 12px; display: flex; align-items: center; gap: 8px;
+}
+.partida-num {
+    background: var(--c-primary); color: #fff;
+    font-size: 10px; font-weight: 700; white-space: nowrap;
+    padding: 3px 9px; border-radius: 10px; flex-shrink: 0;
+}
+.partida-desc { font-size: 12px; font-weight: 600; color: var(--c-text); }
+.fotos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.foto-slot { padding: 8px 12px; border-right: 1px solid var(--c-border); }
+.foto-slot:last-child { border-right: none; }
+.foto-slot img {
+    width: 100%; height: 170px; object-fit: cover;
+    border-radius: 4px; border: 1px solid var(--c-border);
+    display: block;
+}
+.foto-placeholder {
+    width: 100%; height: 170px; border-radius: 4px;
+    border: 2px dashed var(--c-border); background: var(--c-light);
+    display: flex; align-items: center; justify-content: center;
+    color: #aab0c0; font-size: 11px;
+}
+.foto-label { font-size: 10px; font-weight: 600; color: var(--c-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.foto-desc { font-size: 11px; color: #444; margin-top: 4px; }
+.foto-coords { font-size: 10px; color: var(--c-muted); margin-top: 2px; }
+/* Footer */
+.footer {
+    background: var(--c-light); border-top: 2px solid var(--c-border);
+    text-align: center; padding: 12px 20px;
+    font-size: 11px; color: var(--c-muted);
+}
+/* Botón imprimir */
+.print-btn {
+    display: block; margin: 18px auto 0; width: fit-content;
+    background: var(--c-primary); color: #fff; border: none;
+    padding: 10px 30px; border-radius: 6px; font-size: 14px;
+    cursor: pointer; font-weight: 600; letter-spacing: .5px;
+}
+.print-btn:hover { background: var(--c-primary2); }
+</style>");
+                    sb.AppendLine("</head><body>");
+                    sb.AppendLine("<div class='page'>");
+
+                    // ── ENCABEZADO ──
+                    sb.AppendLine("<div class='header'>");
+                    sb.AppendLine("<div class='header-inner'>");
+                    sb.AppendLine("<div class='header-logos'>");
+                    // Logos (rutas estáticas del proyecto)
+                    sb.AppendLine("  <img src='/assets/media/escudo.png' alt='Escudo Chil&oacute;n' onerror=\"this.style.display='none'\">");
+                    sb.AppendLine("  <img src='/assets/media/logo_chilon.png' alt='Logo Chil&oacute;n' onerror=\"this.style.display='none'\">");
+                    sb.AppendLine("</div>");
+                    sb.AppendLine("<div class='header-text'>");
+                    sb.AppendLine("  <div class='ayuntamiento'>H. Ayuntamiento Municipal de Chil&oacute;n, Chiapas</div>");
+                    sb.AppendLine("  <div class='periodo'>2024 &ndash; 2027</div>");
+                    sb.AppendLine("</div>");
+                    sb.AppendLine("</div>"); // header-inner
+                    sb.AppendLine("<div class='header-strip'>C&eacute;dula de Verificaci&oacute;n y Seguimiento &mdash; Reporte Fotogr&aacute;fico</div>");
+                    sb.AppendLine("</div>"); // header
+
+                    // ── CUERPO ──
+                    sb.AppendLine("<div class='body'>");
+                    sb.AppendLine($"<div class='badge-tipo'>Tipo de Visita: {tipoLabel}</div>");
+
+                    // Nombre de la obra
+                    sb.AppendLine("<div class='obra-nombre'>");
+                    sb.AppendLine("  <label>Nombre de la Obra</label>");
+                    sb.AppendLine($"  <div class='val'>{System.Web.HttpUtility.HtmlEncode(nombreObra)}</div>");
+                    sb.AppendLine("</div>");
+
+                    // Card principal — folio + datos generales
+                    sb.AppendLine("<div class='info-card'>");
+                    sb.AppendLine("<div class='info-title'>Datos Generales</div>");
+                    sb.AppendLine("<div class='info-grid cols3'>");
+                    sb.AppendLine($"<div class='info-item'><label>Folio / N&uacute;m. Contrato</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.folio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Estado</label><div class='val'>Chiapas</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Municipio</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(accion.municipio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Localidad</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(accion.localidad)}</div></div>");
+                    // Latitud y Longitud: primero del seguimiento inicio, fallback a acción
+                    string latRep = !string.IsNullOrWhiteSpace(seg.latitud)  ? seg.latitud  : accion.latitud;
+                    string lonRep = !string.IsNullOrWhiteSpace(seg.longitud) ? seg.longitud : accion.longitud;
+                    // Descripción ubicación: direccion (Dirección Específica del inicio) → referencia → descLocalidad de acción → descripcionObra
+                    string descUbicRep = !string.IsNullOrWhiteSpace(seg.direccion)
+                                         ? seg.direccion
+                                         : (!string.IsNullOrWhiteSpace(seg.referencia)
+                                            ? seg.referencia
+                                            : (!string.IsNullOrWhiteSpace(accion.descLocalidad)
+                                               ? accion.descLocalidad
+                                               : seg.descripcionObra));
+                    sb.AppendLine($"<div class='info-item'><label>Latitud</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(latRep)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Longitud</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(lonRep)}</div></div>");
+                    if (!string.IsNullOrWhiteSpace(descUbicRep))
+                    {
+                        sb.AppendLine($"<div class='info-item span3'><label>Descripci&oacute;n de Ubicaci&oacute;n</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(descUbicRep)}</div></div>");
+                    }
+                    // Referencia adicional si existe
+                    if (!string.IsNullOrWhiteSpace(seg.referencia))
+                    {
+                        sb.AppendLine($"<div class='info-item span3'><label>Referencia</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(seg.referencia)}</div></div>");
+                    }
+                    sb.AppendLine("</div>");  // info-grid
+                    sb.AppendLine("</div>");  // info-card
+
+                    // Card contrato — fechas y monto
+                    sb.AppendLine("<div class='info-card'>");
+                    sb.AppendLine("<div class='info-title'>Datos del Contrato</div>");
+                    sb.AppendLine("<div class='info-grid cols3'>");
+                    sb.AppendLine($"<div class='info-item'><label>Fecha de Inicio</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.inicio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Fecha de Conclusi&oacute;n</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.fin)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Monto Total del Proyecto</label><div class='val'>{monto}</div></div>");
+                    sb.AppendLine("</div>");
+                    sb.AppendLine("</div>");
+
+                    // ── REPORTE FOTOGRÁFICO ──
+                    sb.AppendLine("<div class='seccion-foto-titulo'>&#128247;&nbsp; Reporte Fotogr&aacute;fico</div>");
+
+                    if (partidas.Count == 0)
+                    {
+                        sb.AppendLine("<p style='color:#888;font-size:13px;text-align:center;padding:20px 0'>Sin partidas registradas.</p>");
+                    }
+                    else
+                    {
+                        foreach (var p in partidas)
+                        {
+                            long pid = (long)p.idPartida;
+                            sb.AppendLine("<div class='partida-card'>");
+                            sb.AppendLine("<div class='partida-header'>");
+                            sb.AppendLine($"  <div class='partida-num'>Partida {p.orden}</div>");
+                            sb.AppendLine($"  <div class='partida-desc'>{System.Web.HttpUtility.HtmlEncode(p.descripcion)}</div>");
+                            sb.AppendLine("</div>");
+                            sb.AppendLine("<div class='fotos-grid'>");
+
+                            for (int nf = 1; nf <= 2; nf++)
+                            {
+                                dynamic foto = null;
+                                if (fotos.ContainsKey(pid))
+                                    foto = fotos[pid].FirstOrDefault(f => f.numFoto == nf);
+
+                                sb.AppendLine("<div class='foto-slot'>");
+                                sb.AppendLine($"<div class='foto-label'>Foto {nf}</div>");
+                                if (foto != null && !string.IsNullOrEmpty(foto.ruta))
+                                {
+                                    string url = toUrl(foto.ruta);
+                                    sb.AppendLine($"<img src='{url}' alt='Foto {nf}'>");
+                                    if (!string.IsNullOrEmpty(foto.descripcion))
+                                        sb.AppendLine($"<div class='foto-desc'>{System.Web.HttpUtility.HtmlEncode(foto.descripcion)}</div>");
+                                    if (!string.IsNullOrEmpty(foto.latitud) || !string.IsNullOrEmpty(foto.longitud))
+                                        sb.AppendLine($"<div class='foto-coords'>📍 {foto.latitud}, {foto.longitud}</div>");
+                                }
+                                else
+                                {
+                                    sb.AppendLine("<div class='foto-placeholder'>Sin foto</div>");
+                                }
+                                sb.AppendLine("</div>"); // foto-slot
+                            }
+
+                            sb.AppendLine("</div>"); // fotos-grid
+                            sb.AppendLine("</div>"); // partida-card
+                        }
+                    }
+
+                    sb.AppendLine("</div>"); // body
+
+                    // ── FOOTER ──
+                    sb.AppendLine($"<div class='footer'>Reporte generado el {fechaGen} &nbsp;|&nbsp; H. Ayuntamiento Municipal de Chil&oacute;n, Chiapas 2024&ndash;2027</div>");
+                    sb.AppendLine("</div>"); // page
+
+                    // Botón imprimir
+                    sb.AppendLine("<div class='no-print' style='text-align:center;padding:12px 0 8px'>");
+                    sb.AppendLine("<button class='print-btn' onclick='window.print()'>🖨️ Imprimir / Guardar PDF</button>");
+                    sb.AppendLine("<p style='margin-top:8px;font-size:11px;color:#888;padding-bottom:16px'>Tip: en el di&aacute;logo de impresi&oacute;n desactiva <b>Encabezados y pies de p&aacute;gina</b> para quitar la fecha y URL del navegador.</p>");
+                    sb.AppendLine("</div>");
+
+                    sb.AppendLine("</body></html>");
+
+                    var response = Request.CreateResponse(System.Net.HttpStatusCode.OK);
+                    response.Content = new System.Net.Http.StringContent(
+                        sb.ToString(), Encoding.UTF8, "text/html");
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                return MsgError("Error generando reporte: " + ex.Message);
+            }
+        }
+
+        private System.Net.Http.HttpResponseMessage MsgError(string msg)
+        {
+            var html = $"<!DOCTYPE html><html><body style='font-family:Arial;padding:40px;color:#c00'><h3>Error</h3><p>{System.Web.HttpUtility.HtmlEncode(msg)}</p></body></html>";
+            var r = Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+            r.Content = new System.Net.Http.StringContent(html, Encoding.UTF8, "text/html");
+            return r;
+        }
     }
 }

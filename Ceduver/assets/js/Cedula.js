@@ -658,8 +658,9 @@ var CedulaModule = function () {
                 //if (data.foto2) $('#imgFoto2Inicio').attr('src', data.foto2).show();
                 //if (data.foto3) $('#imgFoto3Inicio').attr('src', data.foto3).show();
                 //if (data.foto4) $('#imgFoto4Inicio').attr('src', data.foto4).show();
-                // Supervisor
+                // Supervisor y descripción visita
                 $('#txtSupervisorInicio').val(data.supervisor || '');
+                $('#txtDescripcionVisitaInicio').val(data.descripcionVisita || '');
 
                 // Mostrar fotos existentes con botones descargar/eliminar + coords
                 var fotosInicio = {
@@ -684,10 +685,13 @@ var CedulaModule = function () {
                 if (todosEnCero) {
                     precargarMontosFuentes(idAcciones);
                 }
+                // Cargar partidas de la sección Reporte Fotográfico
+                cargarPartidas(data.idSeguimiento);
             } else {
                 $('#hddAccionMovInicio').val('A');
                 // Registro nuevo: precargar montos desde fuentes de financiamiento
                 precargarMontosFuentes(idAcciones);
+                limpiarPartidas();
             }
         });
 
@@ -698,7 +702,7 @@ var CedulaModule = function () {
         $('#txtNoAgebInicio, #txtFechaVerificacionInicio, #txtDescripcionNoCoincideInicio').val('');
         $('#txtDescripcionNoCoincideRubroInicio, #txtLatitudInicio, #txtLongitudInicio').val('');
         $('#txtDireccionInicio, #txtReferenciaInicio').val('');
-        $('#txtSupervisorInicio').val('');
+        $('#txtSupervisorInicio, #txtDescripcionVisitaInicio').val('');
         $('#txtAportacionFismdfInicio, #txtOtraFuenteFederalInicio, #txtFuenteEstatalInicio').val('0.00');
         $('#txtFuenteMunicipalInicio, #txtOtrosInicio, #txtCostoTotalInicio').val('0.00');
         $('#chkAmpliaInicio, #chkConstruccionInicio, #chkEquipamientoInicio,\
@@ -823,6 +827,7 @@ var CedulaModule = function () {
         formData.append('CoincidePlaneacionRubro', $('#cboCoincidePlaneacionRubroInicio').val());
         formData.append('DescripcionNoCoincideRubro', $('#txtDescripcionNoCoincideRubroInicio').val());
         formData.append('Supervisor', $('#txtSupervisorInicio').val());
+        formData.append('DescripcionVisita', $('#txtDescripcionVisitaInicio').val());
 
         // Coordenadas por slot de foto
         formData.append('LatCroquis', $('#txtLatCroquisInicio').val());
@@ -862,8 +867,12 @@ var CedulaModule = function () {
                 console.log("Respuesta:", response);
 
                 if (response && response.success) {
-                    Swal.fire('Éxito', 'Datos guardados correctamente', 'success');
-                    $('#modalDatosInicio').modal('hide');
+                    // Guardar partidas usando el idSeguimiento que devuelve el servidor
+                    var idSeg = response.idSeguimiento || $('#hddIdSeguimientoInicio').val();
+                    guardarPartidas(idSeg, function () {
+                        Swal.fire('Éxito', 'Datos guardados correctamente', 'success');
+                        $('#modalDatosInicio').modal('hide');
+                    });
                 } else {
                     Swal.fire('Error', 'No se pudo guardar correctamente', 'error');
                 }
@@ -1021,8 +1030,9 @@ var CedulaModule = function () {
         });
 
         if (esNuevo) {
-            // MODO AGREGAR: pre-cargar Seccion 1 del ultimo registro (sin fotos)
+            // MODO AGREGAR: pre-cargar Seccion 1 del ultimo registro; cargar partidas sin fotos
             $('#hddAccionMovSeg').val('A');
+            cargarPartidasFotosSeg(idAcciones, 0);
             $.get(baseUrl + 'GetUltimoSeguimiento/' + idAcciones, function (ultimo) {
                 if (ultimo) {
                     $('#txtNoAgebSeg').val(ultimo.noAgeb || '');
@@ -1070,27 +1080,8 @@ var CedulaModule = function () {
                     $('#cboCatalogoConceptosSeg').val(data.catalogoConcepto ? 'S' : 'N');
                     $('#txtCambiosCatalogoSeg').val(data.cambiosCatalogoConceptos || '');
                     $('#txtCambiosAvanceFisicoSeg').val(data.cambiosAvanceFisico || '');
-                    // Seccion 3
-                    $('#txtObsFoto1Seg').val(data.descripcionFoto1 || '');
-                    $('#txtObsFoto2Seg').val(data.descripcionFoto2 || '');
-                    $('#txtObsFoto3Seg').val(data.descripcionFoto3 || '');
-                    $('#txtObsFoto4Seg').val(data.descripcionFoto4 || '');
-                    $('#txtObsFoto5Seg').val(data.descripcionFoto5 || '');
-                    $('#txtObsFoto6Seg').val(data.descripcionFoto6 || '');
-                    for (var i = 1; i <= 6; i++) {
-                        var rutaFotoSeg = data['foto' + i];
-                        if (rutaFotoSeg) {
-                            $('#hddRutaFoto' + i + 'Seg').val(rutaFotoSeg);
-                            $('#imgFoto' + i + 'Seg').attr('src', rutaFotoSeg).show();
-                            $('#placeholderFoto' + i + 'Seg').hide();
-                            $('#accionesFoto' + i + 'Seg').show();
-                        } else {
-                            $('#imgFoto' + i + 'Seg').hide().attr('src', '');
-                            $('#placeholderFoto' + i + 'Seg').show();
-                            $('#accionesFoto' + i + 'Seg').hide();
-                            $('#hddRutaFoto' + i + 'Seg').val('');
-                        }
-                    }
+                    // Seccion 3 — cargar partidas con sus fotos para este seguimiento
+                    cargarPartidasFotosSeg(idAcciones, idSeguimiento);
                 }
             }).fail(function (xhr) {
                 Swal.fire('Error', 'No se pudo cargar el seguimiento: ' + xhr.responseText, 'error');
@@ -1123,18 +1114,8 @@ var CedulaModule = function () {
         $('#txtAvanceFisicoSeg, #txtAvanceFinancieroSeg').val('0.00');
         $('#cboCatalogoConceptosSeg').val('N');
         $('#txtCambiosCatalogoSeg, #txtCambiosAvanceFisicoSeg').val('');
-        // Seccion 3
-        $('#txtObsFoto1Seg, #txtObsFoto2Seg, #txtObsFoto3Seg').val('');
-        $('#txtObsFoto4Seg, #txtObsFoto5Seg, #txtObsFoto6Seg').val('');
-        /*$('#imgFoto1Seg, #imgFoto2Seg, #imgFoto3Seg, #imgFoto4Seg, #imgFoto5Seg, #imgFoto6Seg').hide().attr('src', '');*/
-        for (var i = 1; i <= 6; i++) {
-            $('#imgFoto' + i + 'Seg').hide().attr('src', '');
-            $('#placeholderFoto' + i + 'Seg').show();
-            $('#accionesFoto' + i + 'Seg').hide();
-            $('#fileFoto' + i + 'Seg').val('');
-            $('#hddRutaFoto' + i + 'Seg').val('');
-        }
-        $('#fileFoto1Seg, #fileFoto2Seg, #fileFoto3Seg, #fileFoto4Seg, #fileFoto5Seg, #fileFoto6Seg').val('');
+        // Seccion 3 — Reporte Fotográfico por Partidas
+        limpiarPartidasFotosSeg();
         // Hiddens
         $('#hddIdSeguimiento').val(0);
         $('#hddAccionMovSeg').val('A');
@@ -1195,10 +1176,16 @@ var CedulaModule = function () {
         });
     };
     var guardarSeguimiento = function () {
-        if (!$('#txtFechaVisitaSeg').val()) {
+        var fechaVal = $('#txtFechaVisitaSeg').val();
+        if (!fechaVal) {
             Swal.fire('Validación', 'La Fecha de Visita es obligatoria', 'warning');
             return;
         }
+
+        // Evitar doble clic
+        var $btn = $('#btnGuardarSeguimiento');
+        if ($btn.prop('disabled')) return;
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
 
         var formData = new FormData();
         // Control
@@ -1240,20 +1227,14 @@ var CedulaModule = function () {
         formData.append('CatalogoConcepto', $('#cboCatalogoConceptosSeg').val() === 'S');
         formData.append('CambiosCatalogoConceptos', $('#txtCambiosCatalogoSeg').val());
         formData.append('CambiosAvanceFisico', $('#txtCambiosAvanceFisicoSeg').val());
-        // Seccion 3 - descripciones
-        formData.append('DescripcionFoto1', $('#txtObsFoto1Seg').val());
-        formData.append('DescripcionFoto2', $('#txtObsFoto2Seg').val());
-        formData.append('DescripcionFoto3', $('#txtObsFoto3Seg').val());
-        formData.append('DescripcionFoto4', $('#txtObsFoto4Seg').val());
-        formData.append('DescripcionFoto5', $('#txtObsFoto5Seg').val());
-        formData.append('DescripcionFoto6', $('#txtObsFoto6Seg').val());
-        // Archivos
-        for (var i = 1; i <= 6; i++) {
-            var fileInput = $('#fileFoto' + i + 'Seg')[0];
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                formData.append('Foto' + i, fileInput.files[0]);
-            }
-        }
+        // Seccion 3 - las fotos ahora van por partidas (guardarFotosPartidas)
+        // Se envian vacias para compatibilidad con el modelo del backend
+        formData.append('DescripcionFoto1', '');
+        formData.append('DescripcionFoto2', '');
+        formData.append('DescripcionFoto3', '');
+        formData.append('DescripcionFoto4', '');
+        formData.append('DescripcionFoto5', '');
+        formData.append('DescripcionFoto6', '');
 
         $.ajax({
             url: baseUrl + 'GuardarSeguimiento',
@@ -1263,24 +1244,30 @@ var CedulaModule = function () {
             contentType: false,
             success: function (response) {
                 if (response && response.success) {
-                    Swal.fire({
-                        title: '¡Éxito!',
-                        text: 'Seguimiento guardado correctamente',
-                        icon: 'success',
-                        timer: 1800,
-                        showConfirmButton: false
-                    }).then(function () {
-                        // Regresar al grid actualizado (dentro del mismo modal)
-                        var idAccion = $('#hddIdAccionFormSeg').val();
-                        $('#hddIdAccionSeg').val(idAccion);
-                        cargarGridSeguimientos(idAccion);
-                        mostrarVistaGrid();
+                    var idSegGuardado = response.idSeguimiento || $('#hddIdSeguimiento').val();
+                    $('#hddIdSeguimiento').val(idSegGuardado);
+                    guardarFotosPartidas(idSegGuardado, function () {
+                        $btn.prop('disabled', false).html('<i class="flaticon-disk"></i> Guardar Seguimiento');
+                        Swal.fire({
+                            title: '¡Éxito!',
+                            text: 'Seguimiento guardado correctamente',
+                            icon: 'success',
+                            timer: 1800,
+                            showConfirmButton: false
+                        }).then(function () {
+                            var idAccion = $('#hddIdAccionFormSeg').val();
+                            $('#hddIdAccionSeg').val(idAccion);
+                            cargarGridSeguimientos(idAccion);
+                            mostrarVistaGrid();
+                        });
                     });
                 } else {
+                    $btn.prop('disabled', false).html('<i class="flaticon-disk"></i> Guardar Seguimiento');
                     Swal.fire('Error', 'No se pudo guardar correctamente', 'error');
                 }
             },
             error: function (xhr) {
+                $btn.prop('disabled', false).html('<i class="flaticon-disk"></i> Guardar Seguimiento');
                 Swal.fire('Error', 'Error al guardar: ' + xhr.responseText, 'error');
             }
         });
@@ -1327,11 +1314,8 @@ var CedulaModule = function () {
     // ---------------------------------------------------------------------------
     var imprimirSeguimiento = function (idSeguimiento)
     {
-        var url = 'Reportes/CRNET.aspx?reporte=Reporteseguimiento'
-            + '&p0=' + idSeguimiento
-            + '&p1=' + idSeguimiento
-        window.open(url, '_blank');    
-        
+        var url = baseUrl + 'ReporteSeguimiento/' + idSeguimiento;
+        window.open(url, '_blank');
     };
 
     // ---------------------------------------------------------------------------
@@ -1475,6 +1459,9 @@ var CedulaModule = function () {
                 }
             });
 
+            // Cargar partidas con fotos para Sección C Final
+            cargarPartidasFotosFinal(idAcciones);
+
             $('#modalDatosFinales').modal('show');
         });
     };
@@ -1503,6 +1490,9 @@ var CedulaModule = function () {
             $('#fileFoto' + i + 'Final').val('');
             $('#hddRutaFoto' + i + 'Final').val('');
         }
+
+        // Sección C: partidas con fotos finales
+        limpiarPartidasFotosFinal();
 
         // Ocultos
         $('#hddAccionMovFinal').val('A');
@@ -1613,13 +1603,8 @@ var CedulaModule = function () {
         formData.append('IdSubrubro', $('#hddIdSubrubroFinal').val());
         formData.append('Subrubro', $('#hddSubrubroFinal').val());
 
-        // Sección C: fotos nuevas
-        for (var i = 1; i <= 6; i++) {
-            var fileInput = $('#fileFoto' + i + 'Final')[0];
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                formData.append('Foto' + i, fileInput.files[0]);
-            }
-        }
+        // Sección C: fotos de partidas se guardan por separado en guardarFotosPartidasFinal
+        // (las fotos genéricas 1-6 quedaron sustituidas por partidas)
 
         $.ajax({
             url: baseUrl + 'GuardarDatosFinales',
@@ -1628,24 +1613,35 @@ var CedulaModule = function () {
             processData: false,
             contentType: false,
             success: function (response) {
-                // Si fue alta, obtener el idseguimiento para permitir eliminar fotos en misma sesión
+                var finalizarGuardado = function (idSegFinal) {
+                    // Guardar fotos de partidas (Sección C) y luego cerrar
+                    guardarFotosPartidasFinal(idSegFinal, function () {
+                        Swal.fire({
+                            title: '¡Éxito!',
+                            text: 'Datos finales guardados correctamente.',
+                            icon: 'success',
+                            timer: 1800,
+                            showConfirmButton: false
+                        }).then(function () {
+                            $('#modalDatosFinales').modal('hide');
+                        });
+                    });
+                };
+
+                // Si fue alta, obtener el idseguimiento generado para fotos y eliminaciones
                 if ($('#hddAccionMovFinal').val() === 'A') {
                     $.get(baseUrl + 'GetDatosFinales/' + $('#hddIdAccionFinal').val(), function (df) {
-                        if (df) {
+                        if (df && df.idSeguimiento) {
                             $('#hddIdSeguimientoFinal').val(df.idSeguimiento);
                             $('#hddAccionMovFinal').val('M');
+                            finalizarGuardado(df.idSeguimiento);
+                        } else {
+                            finalizarGuardado(0);
                         }
-                    });
+                    }).fail(function () { finalizarGuardado(0); });
+                } else {
+                    finalizarGuardado(parseInt($('#hddIdSeguimientoFinal').val()) || 0);
                 }
-                Swal.fire({
-                    title: '¡Éxito!',
-                    text: 'Datos finales guardados correctamente.',
-                    icon: 'success',
-                    timer: 1800,
-                    showConfirmButton: false
-                }).then(function () {
-                    $('#modalDatosFinales').modal('hide');
-                });
             },
             error: function (xhr) {
                 Swal.fire('Error', 'Error al guardar: ' + xhr.responseText, 'error');
@@ -2319,6 +2315,588 @@ var CedulaModule = function () {
     };
 
     //======================================================================
+    // ========== PARTIDAS + FOTOS  SEGUIMIENTO ============================
+    // Cada partida viene de TBLP_cedula_partidas (definida en inicio).
+    // En seguimiento se agregan hasta 2 fotos por partida con lat/lon.
+    // Las fotos se guardan en TBLP_cedula_partidas_fotos.
+    //======================================================================
+    var _partidasFotosSeg = [];
+    // [{idPartida, orden, descripcion,
+    //   foto1:{idFoto, ruta, desc, lat, lon, file},
+    //   foto2:{idFoto, ruta, desc, lat, lon, file} }]
+
+    var limpiarPartidasFotosSeg = function () {
+        _partidasFotosSeg = [];
+        $('#listaPartidasFotosSeg').empty();
+        $('#sinPartidasFotosSeg').show();
+    };
+
+    var renderizarPartidasFotosSeg = function () {
+        var $lista = $('#listaPartidasFotosSeg');
+        $lista.empty();
+        if (!_partidasFotosSeg || _partidasFotosSeg.length === 0) {
+            $('#sinPartidasFotosSeg').show();
+            return;
+        }
+        $('#sinPartidasFotosSeg').hide();
+
+        $.each(_partidasFotosSeg, function (idx, p) {
+            var num = idx + 1;
+            var html = '<div class="card border mb-3 partida-foto-seg-item" data-idpartida="' + p.idPartida + '">'
+                + '<div class="card-header py-2 px-3" style="background:#f3f6f9;">'
+                + '<span class="font-weight-bold text-primary">'
+                + '<i class="fas fa-layer-group mr-1"></i> Partida ' + num + '</span>'
+                + '<span class="ml-2 text-dark">' + escapeHtmlSeg(p.descripcion) + '</span>'
+                + '</div>'
+                + '<div class="card-body p-3">'
+                + '<div class="row">';
+
+            // Foto 1 y Foto 2
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                var fData = p[fKey] || {};
+                var tieneRuta = !!fData.ruta;
+                // Convertir ruta ~/Uploads/... a /Uploads/... para el browser
+                // La ruta guardada es "~/Uploads/Partidas/archivo.jpg"
+                // El browser necesita "/Uploads/Partidas/archivo.jpg"
+                var rutaWeb = (fData.ruta || '').replace(/^~\//, '').replace(/^\//,'');
+                if (rutaWeb) rutaWeb = '/' + rutaWeb;
+                html += '<div class="col-md-6 mb-3">'
+                    + '<div class="card border shadow-sm h-100">'
+                    + '<div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">'
+                    + '<span class="font-weight-bold small">Foto ' + nf + '</span>'
+                    + (tieneRuta
+                        ? '<div>'
+                        + '<button type="button" class="btn btn-xs btn-light-primary btn-descargar-foto-partida" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" data-ruta="' + escapeHtmlSeg(fData.ruta) + '" title="Descargar"><i class="fas fa-download fa-sm"></i></button>'
+                        + '<button type="button" class="btn btn-xs btn-light-danger ml-1 btn-eliminar-foto-partida" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>'
+                        + '</div>'
+                        : '')
+                    + '</div>'
+                    + '<div class="card-body p-2 text-center bg-white">'
+                    + '<img class="rounded img-foto-partida-seg" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" style="' + (tieneRuta ? '' : 'display:none;') + ' max-width:100%; max-height:160px; object-fit:cover;" src="' + rutaWeb + '">'
+                    + '<div class="placeholder-foto-partida-seg text-muted py-3" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" style="' + (tieneRuta ? 'display:none;' : '') + '">'
+                    + '<i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>'
+                    + '<input type="file" class="form-control form-control-sm mt-2 file-foto-partida-seg" accept="image/*" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '">'
+                    + '<input type="text" class="form-control form-control-sm mt-2 txt-obs-foto-partida-seg" placeholder="Descripción / observación" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.desc || '') + '">'
+                    + '<div class="row mt-2">'
+                    + '<div class="col-6"><input type="text" class="form-control form-control-sm txt-lat-foto-partida-seg" placeholder="Latitud" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.lat || '') + '"></div>'
+                    + '<div class="col-6"><input type="text" class="form-control form-control-sm txt-lon-foto-partida-seg" placeholder="Longitud" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.lon || '') + '"></div>'
+                    + '</div>'
+                    + '</div>'  // card-body foto
+                    + '</div>'  // card foto
+                    + '</div>'; // col-md-6
+            }
+
+            html += '</div></div></div>'; // row / card-body partida / card partida
+            $lista.append(html);
+        });
+    };
+
+    var escapeHtmlSeg = function (text) {
+        return $('<div>').text(text || '').html();
+    };
+
+    var initEventosPartidasFotosSeg = function () {
+        // Preview al seleccionar archivo
+        $('#listaPartidasFotosSeg').on('change', '.file-foto-partida-seg', function () {
+            var $input = $(this);
+            var idPartida = parseInt($input.data('idpartida'));
+            var nFoto = parseInt($input.data('nfoto'));
+            var file = this.files && this.files[0];
+            if (!file) return;
+            // Guardar referencia al file en _partidasFotosSeg
+            var p = _partidasFotosSeg.find(function (x) { return x.idPartida === idPartida; });
+            if (p) {
+                var fKey = 'foto' + nFoto;
+                p[fKey] = p[fKey] || {};
+                p[fKey].file = file;
+            }
+            // Preview
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var $cardBody = $input.closest('.card-body');
+                $cardBody.find('.img-foto-partida-seg[data-idpartida="' + idPartida + '"][data-nfoto="' + nFoto + '"]').attr('src', e.target.result).show();
+                $cardBody.find('.placeholder-foto-partida-seg[data-idpartida="' + idPartida + '"][data-nfoto="' + nFoto + '"]').hide();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Descargar foto — usar ruta directa al archivo estático
+        $('#listaPartidasFotosSeg').on('click', '.btn-descargar-foto-partida', function () {
+            var ruta = $(this).data('ruta');
+            if (!ruta) { Swal.fire('Aviso', 'No hay foto guardada.', 'info'); return; }
+            // Convertir ~/Uploads/... a /Uploads/...
+            var rutaWeb = (ruta + '').replace(/^~\//, '').replace(/^\//, '');
+            if (rutaWeb) rutaWeb = '/' + rutaWeb;
+            var nombreArchivo = rutaWeb.split('/').pop() || 'foto.jpg';
+            var link = document.createElement('a');
+            link.href = rutaWeb;
+            link.download = nombreArchivo;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Eliminar foto
+        $('#listaPartidasFotosSeg').on('click', '.btn-eliminar-foto-partida', function () {
+            var $btn = $(this);
+            var idPartida = parseInt($btn.data('idpartida'));
+            var nFoto = parseInt($btn.data('nfoto'));
+            var idSeguimiento = parseInt($('#hddIdSeguimiento').val()) || 0;
+            if (!idSeguimiento) { Swal.fire('Aviso', 'Guarda el seguimiento primero antes de eliminar fotos.', 'info'); return; }
+            Swal.fire({
+                title: '¿Eliminar foto ' + nFoto + '?',
+                text: 'Esta acción no se puede deshacer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#F64E60'
+            }).then(function (res) {
+                if (res.value) {
+                    $.ajax({
+                        url: baseUrl + 'EliminarFotoPartida',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ idSeguimiento: idSeguimiento, idPartida: idPartida, numeroFoto: nFoto }),
+                        success: function () {
+                            var p = _partidasFotosSeg.find(function (x) { return x.idPartida === idPartida; });
+                            if (p) {
+                                var fKey = 'foto' + nFoto;
+                                p[fKey] = { idFoto: 0, ruta: '', desc: '', lat: '', lon: '', file: null };
+                            }
+                            renderizarPartidasFotosSeg();
+                            Swal.fire('Listo', 'Foto eliminada.', 'success');
+                        },
+                        error: function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); }
+                    });
+                }
+            });
+        });
+    };
+
+    // Carga partidas de la acción y sus fotos ya guardadas para idSeguimiento
+    var cargarPartidasFotosSeg = function (idAcciones, idSeguimiento) {
+        limpiarPartidasFotosSeg();
+        $.ajax({
+            url: baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + (idSeguimiento || 0),
+            type: 'GET',
+            success: function (data) {
+                // Respuesta de diagnóstico (objeto con sinInicio=true)
+                if (data && data.sinInicio) {
+                    console.warn('[CEDUVER] GetPartidasConFotosSeg:', data.mensaje);
+                    console.warn('[CEDUVER] Registros encontrados:', data.registros);
+                    $('#sinPartidasFotosSeg').html(
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2 d-block text-warning"></i>' +
+                        '<small class="text-muted">No hay partidas registradas en el inicio de esta acción.</small>' +
+                        '<br><small class="text-danger small" style="font-size:10px;">[Debug] ' + (data.mensaje || '') + '</small>'
+                    ).show();
+                    return;
+                }
+                if (data && data.length > 0) {
+                    _partidasFotosSeg = data.map(function (p) {
+                        return {
+                            idPartida: p.idPartida,
+                            orden: p.orden,
+                            descripcion: p.descripcion,
+                            foto1: {
+                                idFoto: p.idFoto1 || 0,
+                                ruta: p.rutaFoto1 || '',
+                                desc: p.descFoto1 || '',
+                                lat: p.latFoto1 || '',
+                                lon: p.lonFoto1 || '',
+                                file: null
+                            },
+                            foto2: {
+                                idFoto: p.idFoto2 || 0,
+                                ruta: p.rutaFoto2 || '',
+                                desc: p.descFoto2 || '',
+                                lat: p.latFoto2 || '',
+                                lon: p.lonFoto2 || '',
+                                file: null
+                            }
+                        };
+                    });
+                }
+                renderizarPartidasFotosSeg();
+            },
+            error: function () {
+                // Si falla simplemente muestra vacío; no interrumpe el flujo
+                renderizarPartidasFotosSeg();
+            }
+        });
+    };
+
+    // Guarda las fotos nuevas de partidas para un seguimiento (llamado tras guardar seguimiento)
+    var guardarFotosPartidas = function (idSeguimiento, callback) {
+        // Recoger texto/coordenadas del DOM (pueden haber sido editados sin disparar 'change')
+        $('#listaPartidasFotosSeg .partida-foto-seg-item').each(function () {
+            var $item = $(this);
+            var idPartida = parseInt($item.data('idpartida'));
+            var p = _partidasFotosSeg.find(function (x) { return x.idPartida === idPartida; });
+            if (!p) return;
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                p[fKey] = p[fKey] || {};
+                p[fKey].desc = $item.find('.txt-obs-foto-partida-seg[data-nfoto="' + nf + '"]').val() || '';
+                p[fKey].lat  = $item.find('.txt-lat-foto-partida-seg[data-nfoto="' + nf + '"]').val() || '';
+                p[fKey].lon  = $item.find('.txt-lon-foto-partida-seg[data-nfoto="' + nf + '"]').val() || '';
+            }
+        });
+
+        // Construir FormData con metadatos + archivos nuevos
+        var fd = new FormData();
+        fd.append('IdSeguimiento', idSeguimiento);
+        var hayAlgo = false;
+        $.each(_partidasFotosSeg, function (idx, p) {
+            fd.append('Partidas[' + idx + '].IdPartida', p.idPartida);
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                var fData = p[fKey] || {};
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Desc', fData.desc || '');
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Lat',  fData.lat  || '');
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Lon',  fData.lon  || '');
+                if (fData.file) {
+                    fd.append('Partidas[' + idx + '].ArchivoFoto' + nf, fData.file);
+                    hayAlgo = true;
+                } else if (fData.desc || fData.lat || fData.lon) {
+                    hayAlgo = true;
+                }
+            }
+        });
+
+        if (!hayAlgo) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        $.ajax({
+            url: baseUrl + 'GuardarFotosPartidasSeg',
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function () {
+                if (typeof callback === 'function') callback();
+            },
+            error: function (xhr) {
+                Swal.fire('Advertencia', 'El seguimiento se guardó pero ocurrió un error al subir las fotos: ' + xhr.responseText, 'warning');
+                if (typeof callback === 'function') callback();
+            }
+        });
+    };
+
+    //======================================================================
+    // ========== PARTIDAS FOTOS — DATOS FINALES (Sección C) ==============
+    //======================================================================
+    var _partidasFotosFinal = [];
+
+    var limpiarPartidasFotosFinal = function () {
+        _partidasFotosFinal = [];
+        $('#listaPartidasFotosFinal').empty();
+        $('#sinPartidasFotosFinal').html(
+            '<i class="fas fa-layer-group fa-2x mb-2 d-block"></i><small>Cargando partidas...</small>'
+        ).show();
+    };
+
+    var renderizarPartidasFotosFinal = function () {
+        var $lista = $('#listaPartidasFotosFinal');
+        $lista.empty();
+        if (!_partidasFotosFinal || _partidasFotosFinal.length === 0) {
+            $('#sinPartidasFotosFinal').html(
+                '<i class="fas fa-layer-group fa-2x mb-2 d-block"></i>' +
+                '<small>No hay partidas registradas en el inicio de esta acción.</small>'
+            ).show();
+            return;
+        }
+        $('#sinPartidasFotosFinal').hide();
+
+        $.each(_partidasFotosFinal, function (idx, p) {
+            var num = idx + 1;
+            var html = '<div class="card border mb-3 partida-foto-final-item" data-idpartida="' + p.idPartida + '">'
+                + '<div class="card-header py-2 px-3" style="background:#fff8e8;">'
+                + '<span class="font-weight-bold text-warning">'
+                + '<i class="fas fa-layer-group mr-1"></i> Partida ' + num + '</span>'
+                + '<span class="ml-2 text-dark">' + escapeHtmlSeg(p.descripcion) + '</span>'
+                + '</div>'
+                + '<div class="card-body p-3">'
+                + '<div class="row">';
+
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                var fData = p[fKey] || {};
+                var tieneRuta = !!fData.ruta;
+                var rutaWeb = (fData.ruta || '').replace(/^~\//, '').replace(/^\//,'');
+                if (rutaWeb) rutaWeb = '/' + rutaWeb;
+                html += '<div class="col-md-6 mb-3">'
+                    + '<div class="card border shadow-sm h-100">'
+                    + '<div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">'
+                    + '<span class="font-weight-bold small">Foto ' + nf + '</span>'
+                    + (tieneRuta
+                        ? '<div>'
+                        + '<button type="button" class="btn btn-xs btn-light-danger ml-1 btn-eliminar-foto-partida-final" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>'
+                        + '</div>'
+                        : '')
+                    + '</div>'
+                    + '<div class="card-body p-2 text-center bg-white">'
+                    + '<img class="rounded img-foto-partida-final" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" style="' + (tieneRuta ? '' : 'display:none;') + ' max-width:100%; max-height:160px; object-fit:cover;" src="' + rutaWeb + '">'
+                    + '<div class="placeholder-foto-partida-final text-muted py-3" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" style="' + (tieneRuta ? 'display:none;' : '') + '">'
+                    + '<i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>'
+                    + '<input type="file" class="form-control form-control-sm mt-2 file-foto-partida-final" accept="image/*" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '">'
+                    + '<input type="text" class="form-control form-control-sm mt-2 txt-obs-foto-partida-final" placeholder="Descripci&oacute;n / observaci&oacute;n" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.desc || '') + '">'
+                    + '<div class="row mt-2">'
+                    + '<div class="col-6"><input type="text" class="form-control form-control-sm txt-lat-foto-partida-final" placeholder="Latitud" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.lat || '') + '"></div>'
+                    + '<div class="col-6"><input type="text" class="form-control form-control-sm txt-lon-foto-partida-final" placeholder="Longitud" data-idpartida="' + p.idPartida + '" data-nfoto="' + nf + '" value="' + escapeHtmlSeg(fData.lon || '') + '"></div>'
+                    + '</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '</div>';
+            }
+            html += '</div></div></div>';
+            $lista.append(html);
+        });
+    };
+
+    var cargarPartidasFotosFinal = function (idAcciones) {
+        limpiarPartidasFotosFinal();
+        // Reutilizamos el mismo endpoint GetPartidasConFotosSeg con idSeguimiento=0
+        // para obtener las partidas del inicio; luego recargamos con el id del final si existe
+        var idSegFinal = parseInt($('#hddIdSeguimientoFinal').val()) || 0;
+        $.ajax({
+            url: baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + idSegFinal,
+            type: 'GET',
+            success: function (data) {
+                if (data && data.sinInicio) {
+                    $('#sinPartidasFotosFinal').html(
+                        '<i class="fas fa-exclamation-triangle fa-2x mb-2 d-block text-warning"></i>' +
+                        '<small class="text-muted">No hay partidas registradas en el inicio de esta acci&oacute;n.</small>'
+                    ).show();
+                    return;
+                }
+                if (data && data.length > 0) {
+                    _partidasFotosFinal = data.map(function (p) {
+                        return {
+                            idPartida: p.idPartida,
+                            orden: p.orden,
+                            descripcion: p.descripcion,
+                            foto1: { idFoto: p.idFoto1||0, ruta: p.rutaFoto1||'', desc: p.descFoto1||'', lat: p.latFoto1||'', lon: p.lonFoto1||'', file: null },
+                            foto2: { idFoto: p.idFoto2||0, ruta: p.rutaFoto2||'', desc: p.descFoto2||'', lat: p.latFoto2||'', lon: p.lonFoto2||'', file: null }
+                        };
+                    });
+                }
+                renderizarPartidasFotosFinal();
+            },
+            error: function () { renderizarPartidasFotosFinal(); }
+        });
+    };
+
+    var initEventosPartidasFotosFinal = function () {
+        // Preview al seleccionar archivo
+        $('#listaPartidasFotosFinal').on('change', '.file-foto-partida-final', function () {
+            var $input = $(this);
+            var idPartida = parseInt($input.data('idpartida'));
+            var nfoto = parseInt($input.data('nfoto'));
+            var file = $input[0].files[0];
+            if (!file) return;
+            var p = _partidasFotosFinal.find(function (x) { return x.idPartida === idPartida; });
+            if (!p) return;
+            p['foto' + nfoto].file = file;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $input.closest('.card-body')
+                    .find('.img-foto-partida-final[data-nfoto="' + nfoto + '"]').attr('src', e.target.result).show();
+                $input.closest('.card-body')
+                    .find('.placeholder-foto-partida-final[data-nfoto="' + nfoto + '"]').hide();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Eliminar foto
+        $('#listaPartidasFotosFinal').on('click', '.btn-eliminar-foto-partida-final', function () {
+            var idPartida = parseInt($(this).data('idpartida'));
+            var nfoto = parseInt($(this).data('nfoto'));
+            var idSegFinal = parseInt($('#hddIdSeguimientoFinal').val()) || 0;
+            if (!idSegFinal) { Swal.fire('Aviso', 'Guarda primero los datos finales para poder eliminar fotos.', 'info'); return; }
+            var p = _partidasFotosFinal.find(function (x) { return x.idPartida === idPartida; });
+            var idFoto = p ? (p['foto' + nfoto] || {}).idFoto : 0;
+            if (!idFoto) return;
+            Swal.fire({ title: '¿Eliminar foto?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar' }).then(function (r) {
+                if (!r.isConfirmed) return;
+                $.post(baseUrl + 'EliminarFotoPartidaSeg', { IdFoto: idFoto }, function () {
+                    if (p) { p['foto' + nfoto] = { idFoto: 0, ruta: '', desc: '', lat: '', lon: '', file: null }; }
+                    renderizarPartidasFotosFinal();
+                }).fail(function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); });
+            });
+        });
+    };
+
+    var guardarFotosPartidasFinal = function (idSeguimiento, callback) {
+        // Leer valores actuales del DOM
+        $('#listaPartidasFotosFinal .partida-foto-final-item').each(function () {
+            var $item = $(this);
+            var idPartida = parseInt($item.data('idpartida'));
+            var p = _partidasFotosFinal.find(function (x) { return x.idPartida === idPartida; });
+            if (!p) return;
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                p[fKey] = p[fKey] || {};
+                p[fKey].desc = $item.find('.txt-obs-foto-partida-final[data-nfoto="' + nf + '"]').val() || '';
+                p[fKey].lat  = $item.find('.txt-lat-foto-partida-final[data-nfoto="' + nf + '"]').val() || '';
+                p[fKey].lon  = $item.find('.txt-lon-foto-partida-final[data-nfoto="' + nf + '"]').val() || '';
+            }
+        });
+
+        var fd = new FormData();
+        fd.append('IdSeguimiento', idSeguimiento);
+        var hayAlgo = false;
+        $.each(_partidasFotosFinal, function (idx, p) {
+            fd.append('Partidas[' + idx + '].IdPartida', p.idPartida);
+            for (var nf = 1; nf <= 2; nf++) {
+                var fKey = 'foto' + nf;
+                var fData = p[fKey] || {};
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Desc', fData.desc || '');
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Lat',  fData.lat  || '');
+                fd.append('Partidas[' + idx + '].Foto' + nf + 'Lon',  fData.lon  || '');
+                if (fData.file) {
+                    fd.append('Partidas[' + idx + '].ArchivoFoto' + nf, fData.file);
+                    hayAlgo = true;
+                } else if (fData.desc || fData.lat || fData.lon) {
+                    hayAlgo = true;
+                }
+            }
+        });
+
+        if (!hayAlgo) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        $.ajax({
+            url: baseUrl + 'GuardarFotosPartidasSeg',   // mismo endpoint, tabla por idseguimiento
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function () { if (typeof callback === 'function') callback(); },
+            error: function (xhr) {
+                Swal.fire('Advertencia', 'Los datos finales se guardaron pero ocurri&oacute; un error al subir las fotos: ' + xhr.responseText, 'warning');
+                if (typeof callback === 'function') callback();
+            }
+        });
+    };
+
+    //======================================================================
+    // ==================== PARTIDAS INICIO ================================
+    //======================================================================
+    var _partidasInicio = [];   // [{id, descripcion}]
+    var _partidasContador = 0;
+
+    var renderizarPartidas = function () {
+        var lista = $('#listaPartidasInicio');
+        var sinMsg = $('#sinPartidasInicio');
+        lista.empty();
+        if (_partidasInicio.length === 0) {
+            sinMsg.show();
+            return;
+        }
+        sinMsg.hide();
+        $.each(_partidasInicio, function (idx, p) {
+            var num = idx + 1;
+            var html = '<div class="card border mb-2 partida-item" data-id="' + p.id + '">' +
+                '<div class="card-header py-2 px-3 d-flex justify-content-between align-items-center" style="background:#fdf0f0;">' +
+                    '<span class="font-weight-bold text-danger"><i class="fas fa-layer-group mr-1"></i>Partida ' + num + '</span>' +
+                    '<button type="button" class="btn btn-xs btn-light-danger btn-eliminar-partida" data-id="' + p.id + '" title="Eliminar partida">' +
+                        '<i class="fas fa-trash fa-sm"></i>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="card-body py-2 px-3">' +
+                    '<textarea class="form-control form-control-sm partida-desc" data-id="' + p.id + '" rows="2" ' +
+                        'placeholder="Descripción de la partida (ej: 2,545.29 M2 DE DEMOLICIÓN DE PISO DE CONCRETO...)">' +
+                        escapeHtml(p.descripcion) +
+                    '</textarea>' +
+                '</div>' +
+            '</div>';
+            lista.append(html);
+        });
+    };
+
+    var escapeHtml = function(text) {
+        return $('<div>').text(text || '').html();
+    };
+
+    var initEventosPartidas = function () {
+        $('#btnAgregarPartidaInicio').on('click', function () {
+            _partidasContador++;
+            _partidasInicio.push({ id: _partidasContador, descripcion: '' });
+            renderizarPartidas();
+            // Focus en el nuevo textarea
+            $('#listaPartidasInicio .partida-item:last textarea').focus();
+        });
+
+        // Delegación: eliminar partida
+        $('#listaPartidasInicio').on('click', '.btn-eliminar-partida', function () {
+            var id = parseInt($(this).data('id'));
+            _partidasInicio = _partidasInicio.filter(function (p) { return p.id !== id; });
+            renderizarPartidas();
+        });
+
+        // Delegación: sincronizar texto al escribir
+        $('#listaPartidasInicio').on('input', '.partida-desc', function () {
+            var id = parseInt($(this).data('id'));
+            var p = _partidasInicio.find(function (x) { return x.id === id; });
+            if (p) p.descripcion = $(this).val();
+        });
+    };
+
+    var limpiarPartidas = function () {
+        _partidasInicio = [];
+        _partidasContador = 0;
+        renderizarPartidas();
+    };
+
+    var cargarPartidas = function (idSeguimiento) {
+        limpiarPartidas();
+        if (!idSeguimiento) return;
+        $.ajax({
+            url: baseUrl + 'GetPartidasInicio/' + idSeguimiento,
+            type: 'GET',
+            success: function (data) {
+                if (data && data.length) {
+                    $.each(data, function (i, p) {
+                        _partidasContador++;
+                        _partidasInicio.push({ id: _partidasContador, descripcion: p.descripcion || '' });
+                    });
+                    renderizarPartidas();
+                }
+            },
+            error: function () { /* tabla aún no existe, ignorar */ }
+        });
+    };
+
+    var guardarPartidas = function (idSeguimiento, callback) {
+        // Sincroniza textos actuales desde DOM antes de guardar
+        $('#listaPartidasInicio .partida-desc').each(function () {
+            var id = parseInt($(this).data('id'));
+            var p = _partidasInicio.find(function (x) { return x.id === id; });
+            if (p) p.descripcion = $(this).val();
+        });
+
+        var partidas = _partidasInicio.map(function (p, idx) {
+            return { orden: idx + 1, descripcion: p.descripcion };
+        });
+
+        $.ajax({
+            url: baseUrl + 'GuardarPartidasInicio',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ idSeguimiento: idSeguimiento, partidas: partidas }),
+            success: function () { if (callback) callback(); },
+            error: function () { if (callback) callback(); }
+        });
+    };
+
+    //======================================================================
     // ======================== RETURN =====================================
     //======================================================================
     return {
@@ -2333,7 +2911,10 @@ var CedulaModule = function () {
             // 🔥 AGREGA ESTA LÍNEA
             initEventosFotos();
             // ✅ INICIALIZA EVENTOS SEGUIMIENTO
-            initEventosSeguimiento(); 
+            initEventosSeguimiento();
+            initEventosPartidasFotosSeg();
+            initEventosPartidasFotosFinal();
+            initEventosPartidas();
             TablaCedulas.init();
         },
         // Funciones publicas
@@ -2377,7 +2958,7 @@ var CedulaModule = function () {
 //======================================================================
 // ============== UTILIDADES ===========================================
 //======================================================================
-const Utils = {
+const CedulaUtils = {
     formatDate(date, options = {}) {
         const defaultOptions = {
             weekday: 'long',
@@ -2408,7 +2989,7 @@ const Utils = {
 //======================================================================
 // ============== RELOJ EN TIEMPO REAL =================================
 //======================================================================
-const Clock = {
+var CedulaClock = {
     dateElement: null,
     timeElement: null,
 
@@ -2424,15 +3005,15 @@ const Clock = {
     update() {
         const now = new Date();
         if (this.dateElement) {
-            this.dateElement.textContent = Utils.formatDate(now);
+            this.dateElement.textContent = CedulaUtils.formatDate(now);
         }
         if (this.timeElement) {
-            this.timeElement.textContent = Utils.formatTime(now);
+            this.timeElement.textContent = CedulaUtils.formatTime(now);
         }
     }
 };
 // Inicializar cuando el documento este listo
 jQuery(document).ready(function () {
     CedulaModule.init();
-    Clock.init();
+    CedulaClock.init();
 });

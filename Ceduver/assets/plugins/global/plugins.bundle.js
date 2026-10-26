@@ -14993,10 +14993,10 @@ h(Math,"acosh",Cr.acosh,Math.acosh(Number.MAX_VALUE)===Infinity);h(Math,"acosh",
 
  * Copyright 2017 Kevin Morris
  * Copyright 2006 M. Alsup
-
+ * 
  * Dual licensed under the LGPL-2.1+ or MIT licenses
  * https://github.com/jquery-form/form#license
-
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either

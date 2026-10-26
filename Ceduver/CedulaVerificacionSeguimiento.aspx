@@ -1,4 +1,4 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="CedulaVerificacionSeguimiento.aspx.cs" Inherits="Ceduver.CedulaVerificacionSeguimiento" %>
+<%@ Page Title="" Language="C#" MasterPageFile="~/Site1.Master" AutoEventWireup="true" CodeBehind="CedulaVerificacionSeguimiento.aspx.cs" Inherits="Ceduver.CedulaVerificacionSeguimiento" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
 <style>
     .modal-dialog-custom { max-width: 95%; }
@@ -384,6 +384,16 @@
                                     </div>
                                 </div>
                             </div>
+                            <%-- Fila: Descripción de la Visita --%>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold"><i class="fas fa-file-alt text-success mr-1"></i>Descripción de la Visita:</label>
+                                        <textarea class="form-control" id="txtDescripcionVisitaInicio" rows="3"
+                                                  placeholder="SE REALIZA LA VISITA A LA LOCALIDAD EN COMPAÑÍA DE..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
                             <%-- Fila 2: Incidencia | Coincide Planeacion | Describa no coincide --%>
                             <div class="row">
                                 <div class="col-md-3">
@@ -539,9 +549,9 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group">
-                                        <label class="font-weight-bold">Referencias (Colonia, Barrio, Poblado, Ranchería, etc.):</label>
+                                        <label class="font-weight-bold">Descripción de la Ubicación:</label>
                                         <textarea class="form-control" id="txtReferenciaInicio" rows="2"
-                                                  placeholder="Indique referencias de ubicación..."></textarea>
+                                                  placeholder="Municipio, Localidad, Tipo de vialidad, Nombre de vialidad, Referencias adicionales..."></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -709,6 +719,32 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- ═══ SECCIÓN E — Reporte Fotográfico (Partidas) ═══ -->
+                    <div class="card card-custom gutter-b shadow-sm mt-3" style="border-left:4px solid #c0392b !important;">
+                        <div class="card-header" style="background:#fff0f2; min-height:45px; padding:10px 20px;">
+                            <div class="card-title mb-0 w-100 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-images text-danger mr-2"></i>
+                                    <span class="font-weight-bold text-danger">REPORTE FOTOGRÁFICO</span>
+                                    <small class="text-muted ml-2 font-weight-normal">(registre las partidas; las fotos se agregan en seguimiento)</small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" id="btnAgregarPartidaInicio">
+                                    <i class="flaticon-plus"></i> Agregar Partida
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body pb-2" id="contenedorPartidasInicio">
+                            <div id="listaPartidasInicio">
+                                <%-- Las partidas se renderizan dinámicamente por JS --%>
+                            </div>
+                            <div id="sinPartidasInicio" class="text-center text-muted py-4">
+                                <i class="fas fa-layer-group fa-2x mb-2 d-block"></i>
+                                <small>No hay partidas registradas. Haga clic en <b>Agregar Partida</b> para comenzar.</small>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <input type="hidden" id="hddIdAccionInicio">
@@ -1107,174 +1143,31 @@
                                 </div>
                             </div>
                         </div>--%>
-                        <!-- SECCION 3: Album de Fotos -->
-                        <div class="card card-custom gutter-b" style="border-left:4px solid #FFA800 !important;">
-                            <div class="card-header" style="background-color:#fff8e8; min-height:45px;">
+                        <%-- ═══════════════════════════════════════════════════════════════════
+                             SECCION 3: Album de Fotos (DESACTIVADO - reservado para uso futuro)
+                             Se reemplazó por Reporte Fotográfico por Partidas (ver abajo).
+                             Para reactivar: descomentar este bloque y comentar la sección de partidas.
+                        <div class="card card-custom gutter-b" style="border-left:4px solid #FFA800">
+                            ... fotos fijas 1-6 ...
+                        </div>
+                        ══════════════════════════════════════════════════════════════════════ --%>
+
+                        <!-- ═══ SECCIÓN 3 — REPORTE FOTOGRÁFICO POR PARTIDAS ═══ -->
+                        <div class="card card-custom gutter-b shadow-sm mt-3" style="border-left:4px solid #c0392b !important;">
+                            <div class="card-header" style="background:#fff0f2; min-height:45px; padding:10px 20px;">
                                 <div class="card-title mb-0">
-                                    <i class="fas fa-camera text-warning mr-2"></i>
-                                    <span class="font-weight-bold text-warning">SECCIÓN 3 — Álbum de Fotos</span>
-                                    <small class="text-muted ml-2">(fotos nuevas para este seguimiento)</small>
+                                    <i class="fas fa-images text-danger mr-2"></i>
+                                    <span class="font-weight-bold text-danger">SECCIÓN 3 — REPORTE FOTOGRÁFICO</span>
+                                    <small class="text-muted ml-2 font-weight-normal">(2 fotos por partida con coordenadas)</small>
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <%-- Foto 1 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 1</span>
-                                                <div id="accionesFoto1Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(1)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(1)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto1Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto1Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto1Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto1Seg" rows="2" placeholder="Descripción / Observación foto 1"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <%-- Foto 2 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 2</span>
-                                                <div id="accionesFoto2Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(2)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(2)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto2Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto2Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto2Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto2Seg" rows="2" placeholder="Descripción / Observación foto 2"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <%-- Foto 3 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 3</span>
-                                                <div id="accionesFoto3Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(3)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(3)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto3Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto3Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto3Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto3Seg" rows="2" placeholder="Descripción / Observación foto 3"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <%-- Foto 4 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 4</span>
-                                                <div id="accionesFoto4Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(4)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(4)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto4Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto4Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto4Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto4Seg" rows="2" placeholder="Descripción / Observación foto 4"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <%-- Foto 5 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 5</span>
-                                                <div id="accionesFoto5Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(5)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(5)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto5Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto5Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto5Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto5Seg" rows="2" placeholder="Descripción / Observación foto 5"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <%-- Foto 6 --%>
-                                    <div class="col-md-4 mb-4">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                                <span class="font-weight-bold small">Foto 6</span>
-                                                <div id="accionesFoto6Seg" style="display:none;">
-                                                    <button type="button" class="btn btn-xs btn-light-primary"
-                                                            onclick="CedulaModule.descargarFotoSeg(6)" title="Descargar">
-                                                        <i class="fas fa-download fa-sm"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-xs btn-light-danger ml-1"
-                                                            onclick="CedulaModule.eliminarFotoSeg(6)" title="Eliminar">
-                                                        <i class="fas fa-trash fa-sm"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body p-2 text-center bg-white">
-                                                <img id="imgFoto6Seg" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                                <div id="placeholderFoto6Seg" class="text-muted py-3">
-                                                    <i class="fas fa-image fa-2x"></i><br><small>Sin foto</small>
-                                                </div>
-                                                <input type="file" class="form-control form-control-sm mt-2" id="fileFoto6Seg" accept="image/*">
-                                                <textarea class="form-control form-control-sm mt-2" id="txtObsFoto6Seg" rows="2" placeholder="Descripción / Observación foto 6"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div class="card-body pb-2" id="contenedorPartidasFotosSeg">
+                                <!-- JS renderiza aquí las partidas con sus 2 slots de foto -->
+                                <div id="sinPartidasFotosSeg" class="text-center text-muted py-4">
+                                    <i class="fas fa-layer-group fa-2x mb-2 d-block"></i>
+                                    <small>No hay partidas registradas en el inicio de esta acción.</small>
                                 </div>
+                                <div id="listaPartidasFotosSeg"></div>
                             </div>
                         </div>
 
@@ -1572,122 +1465,32 @@
                         </div>
                     </div>
 
+                    <%-- ═══════════════════════════════════════════════════════════ --%>
+                    <%-- SECCIÓN C — Álbum genérico (comentado, reemplazado por partidas) --%>
+                    <%-- ═══════════════════════════════════════════════════════════ --%>
+                    <%--
+                    <div class="card card-custom gutter-b" style="border-left:4px solid #FFA800 !important;">
+                        ... álbum de 6 fotos genéricas (desactivado) ...
+                    </div>
+                    --%>
+
                     <!-- ═══════════════════════════════════════════════════════════ -->
-                    <!-- SECCIÓN C — Álbum de Fotos Finales                        -->
+                    <!-- SECCIÓN C — Reporte Fotográfico por Partidas (Cierre)     -->
                     <!-- ═══════════════════════════════════════════════════════════ -->
                     <div class="card card-custom gutter-b" style="border-left:4px solid #FFA800 !important;">
                         <div class="card-header" style="background:#fff8e8; min-height:45px; padding:10px 20px;">
                             <div class="card-title mb-0">
                                 <i class="fas fa-camera text-warning mr-2"></i>
-                                <span class="font-weight-bold text-warning">SECCIÓN C — Álbum de Fotos Finales</span>
-                                <small class="text-muted ml-2">(hasta 6 fotos de cierre de obra)</small>
+                                <span class="font-weight-bold text-warning">SECCIÓN C — Reporte Fotográfico por Partidas</span>
+                                <small class="text-muted ml-2">(2 fotos por partida al cierre de obra)</small>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <%-- Foto 1 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 1</span>
-                                            <div id="accionesFoto1Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(1)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(1)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto1Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto1Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto1Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <%-- Foto 2 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 2</span>
-                                            <div id="accionesFoto2Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(2)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(2)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto2Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto2Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto2Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <%-- Foto 3 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 3</span>
-                                            <div id="accionesFoto3Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(3)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(3)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto3Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto3Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto3Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <%-- Foto 4 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 4</span>
-                                            <div id="accionesFoto4Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(4)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(4)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto4Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto4Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto4Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <%-- Foto 5 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 5</span>
-                                            <div id="accionesFoto5Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(5)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(5)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto5Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto5Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto5Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <%-- Foto 6 --%>
-                                <div class="col-md-4 mb-4">
-                                    <div class="card border shadow-sm h-100">
-                                        <div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold small">Foto 6</span>
-                                            <div id="accionesFoto6Final" style="display:none;">
-                                                <button type="button" class="btn btn-xs btn-light-primary" onclick="CedulaModule.descargarFotoFinal(6)" title="Descargar"><i class="fas fa-download fa-sm"></i></button>
-                                                <button type="button" class="btn btn-xs btn-light-danger ml-1" onclick="CedulaModule.eliminarFotoFinal(6)" title="Eliminar"><i class="fas fa-trash fa-sm"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-2 text-center bg-white">
-                                            <img id="imgFoto6Final" class="rounded" style="display:none; max-width:100%; max-height:160px; object-fit:cover;">
-                                            <div id="placeholderFoto6Final" class="text-muted py-3"><i class="fas fa-image fa-2x"></i><br><small>Sin foto</small></div>
-                                            <input type="file" class="form-control form-control-sm mt-2" id="fileFoto6Final" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div><%-- /row fotos --%>
+                        <div class="card-body p-3">
+                            <div id="sinPartidasFotosFinal" class="text-center text-muted py-4">
+                                <i class="fas fa-layer-group fa-2x mb-2 d-block"></i>
+                                <small>Cargando partidas...</small>
+                            </div>
+                            <div id="listaPartidasFotosFinal"></div>
                         </div>
                     </div>
 
@@ -2249,7 +2052,7 @@
             </div>
         </div>
     </div>
-    <script src="assets/js/Cedula.js"></script>
+    <%-- Cedula.js ya se carga desde Site1.Master (no duplicar) --%>
     <script>
         // Actualizar label del custom-file cuando se selecciona imagen
         document.addEventListener('change', function (e) {

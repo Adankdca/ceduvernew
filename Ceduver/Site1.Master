@@ -519,9 +519,9 @@
 	<script src="assets/js/pages/crud/forms/widgets/bootstrap-datepicker.js"></script>
     <script src="assets/plugins/custom/uppy/uppy.bundle.js"></script>
     
-    <script src="assets/js/Obras.js?v=4"></script>
+    <script src="assets/js/Obras.js?v=5"></script>
 
-    <%--<script src="assets/js/Cedula.js"></script>--%>
+    <script src="assets/js/Cedula.js?v=9"></script>
 
 	<script>
         document.addEventListener("DOMContentLoaded", function () {

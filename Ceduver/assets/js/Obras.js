@@ -1760,7 +1760,7 @@ const Utils = {
 //======================================================================
 // ============== RELOJ EN TIEMPO REAL =================================
 //======================================================================
-const Clock = {
+var Clock = window.Clock || {
     dateElement: null,
     timeElement: null,
 
@@ -1783,6 +1783,7 @@ const Clock = {
         }
     }
 };
+window.Clock = Clock;
 // Inicializar al cargar la página
 $(document).ready(function () {
     ObrasModule.init();
