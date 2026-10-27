@@ -1538,7 +1538,6 @@
                     </div>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
                 </div>
-
                 <div class="modal-body" style="background:#f8f9fa;">
 
                     <!-- ── ENCABEZADO DATOS GENERALES ────────────────────────── -->
@@ -1557,6 +1556,14 @@
                                 <div class="col-md-4 col-12 mb-2">
                                     <small class="text-muted text-uppercase" style="font-size:.7rem;">Rubro</small>
                                     <div id="lblRubroFism" class="font-weight-bold"></div>
+                                </div>
+                                <div class="col-md-4 col-12 mb-2">
+                                    <small class="text-muted text-uppercase" style="font-size:.7rem;">Subclasificación</small>
+                                    <div id="lblSubclasificacionFism" class="font-weight-bold"></div>
+                                </div>
+                                <div class="col-md-4 col-12 mb-2">
+                                    <small class="text-muted text-uppercase" style="font-size:.7rem;">Modalidad</small>
+                                    <div id="lblModalidadFism" class="font-weight-bold"></div>
                                 </div>
                                 <div class="col-md-4 col-12 mb-2">
                                     <small class="text-muted text-uppercase" style="font-size:.7rem;">Núm. Contrato</small>
@@ -1591,8 +1598,35 @@
                                     <div id="lblProgramaFism" class="font-weight-bold"></div>
                                 </div>
                                 <div class="col-md-12 mb-2">
-                                    <small class="text-muted text-uppercase" style="font-size:.7rem;">Descripción de la Obra</small>
+                                    <small class="text-muted text-uppercase" style="font-size:.7rem;">Descripción de la Obra (encabezado)</small>
                                     <div id="lblDescripcionObraFism" class="font-weight-bold text-break"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── OFICIOS ────────────────────────────────────────────── -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header py-2" style="background:#37474f;">
+                            <span class="text-white font-weight-bold">
+                                <i class="fas fa-stamp mr-1"></i> Oficios
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">N° Oficio de Reg. y Control emitido por el Municipio</label>
+                                        <input type="text" class="form-control" id="txtoficioreg"
+                                               placeholder="Ej. MCC/DP/FAISMUN-168/2024">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Número de Obra emitido por el Municipio</label>
+                                        <input type="text" class="form-control" id="txtnumobramun"
+                                               placeholder="Ej. 031-213-168">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1605,47 +1639,61 @@
                                 <i class="fas fa-chart-bar mr-1"></i> Situación Financiera
                             </span>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <!-- Inversión Programada -->
-                                <div class="col-md-6">
-                                    <h6 class="text-muted mb-3 border-bottom pb-1">Inversión Programada</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="font-weight-bold text-danger">F.I.S.M. <span class="text-muted font-weight-normal small">$</span></label>
-                                                <input type="text" class="form-control text-right" id="txtInversionProgramadaFism" value="0.00">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="font-weight-bold text-danger">Aportación <span class="text-muted font-weight-normal small">$</span></label>
-                                                <input type="text" class="form-control text-right" id="txtAportacionProgramadaFism" value="0.00">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Inversión Ejercida -->
-                                <div class="col-md-6">
-                                    <h6 class="text-muted mb-3 border-bottom pb-1">Inversión Ejercida</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="font-weight-bold text-danger">F.I.S.M. <span class="text-muted font-weight-normal small">$</span></label>
-                                                <input type="text" class="form-control text-right" id="txtInversionEjercidaFism" value="0.00">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="font-weight-bold text-danger">Aportación <span class="text-muted font-weight-normal small">$</span></label>
-                                                <input type="text" class="form-control text-right" id="txtAportacionEjercidaFism" value="0.00">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm mb-0" style="min-width:700px;">
+                                    <thead>
+                                        <tr style="background:#1a237e; color:#fff;">
+                                            <th style="width:22%;">Concepto</th>
+                                            <th class="text-center" style="width:26%;">Inversión Programada $</th>
+                                            <th class="text-center" style="width:26%;">Inversión Ejercida $</th>
+                                            <th class="text-center" style="width:26%;">Saldo $</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="align-middle font-weight-bold text-danger">F.I.S.M.</td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtInversionProgramadaFism" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtInversionEjercidaFism" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right bg-light" id="txtsaldofism" value="0.00" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="align-middle font-weight-bold text-danger">Aportación Beneficiarios</td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtAportacionProgramadaFism" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtAportacionEjercidaFism" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right bg-light" id="txtaportacionfism" value="0.00" readonly></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="align-middle font-weight-bold text-danger">Otros</td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtotrosprogramada" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right fism-calc" id="txtotrosejercida" value="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right bg-light" id="txtotrossaldofism" value="0.00" readonly></td>
+                                        </tr>
+                                        <tr style="background:#fff3e0;">
+                                            <td class="align-middle font-weight-bold">Total</td>
+                                            <td><input type="text" class="form-control form-control-sm text-right font-weight-bold bg-light" id="txttotalprogramada" value="0.00" readonly></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right font-weight-bold bg-light" id="txttotalejercida" value="0.00" readonly></td>
+                                            <td><input type="text" class="form-control form-control-sm text-right font-weight-bold bg-light" id="txttotalsaldo" value="0.00" readonly></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Dictamen + Fechas programadas -->
+                    <!-- ── DESCRIPCIÓN Y AVANCES ─────────────────────────────── -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header py-2" style="background:#e65100;">
+                            <span class="text-white font-weight-bold">
+                                <i class="fas fa-align-left mr-1"></i> Descripción de la Obra y Avances
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Descripción de la Obra</label>
+                                <textarea class="form-control" id="txtdescripcionobrafism" rows="4"
+                                          placeholder="Descripción detallada de la obra..."></textarea>
+                            </div>
                             <div class="row mt-2">
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -1656,7 +1704,6 @@
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="font-weight-bold text-danger">Fecha Prog. Inicio</label>
-                                        <!-- ✅ clase "fecha" para que el datepicker VS2026 lo tome -->
                                         <div class="input-group date">
                                             <input type="text" class="form-control fecha" id="txtFechaInicioProgramadaFism"
                                                    placeholder="dd/mm/aaaa" autocomplete="off" readonly>
@@ -1676,6 +1723,23 @@
                                                 <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Avances -->
+                            <div class="row mt-1">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Avance Físico <small class="text-muted">%</small></label>
+                                        <input type="text" class="form-control text-right" id="txtavancefisicofism"
+                                               value="0" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Avance Financiero <small class="text-muted">%</small></label>
+                                        <input type="text" class="form-control text-right" id="txtavancefinancierofism"
+                                               value="0" placeholder="0">
                                     </div>
                                 </div>
                             </div>
@@ -1701,7 +1765,6 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <!-- Contrato -->
                                         <tr>
                                             <td class="align-middle font-weight-bold text-primary">Contrato</td>
                                             <td><input type="text" class="form-control form-control-sm text-right" id="txtContratoImporteFism" value="0.00"></td>
@@ -1718,7 +1781,6 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <!-- Diferido -->
                                         <tr>
                                             <td class="align-middle font-weight-bold text-warning">Diferido</td>
                                             <td><input type="text" class="form-control form-control-sm text-right" id="txtDiferidoImporteFism" value="0.00"></td>
@@ -1735,7 +1797,6 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <!-- Ampliación de Plazo -->
                                         <tr>
                                             <td class="align-middle font-weight-bold text-danger">Ampl. Plazo</td>
                                             <td><input type="text" class="form-control form-control-sm text-right" id="txtAmpliacionImporteFism" value="0.00"></td>
@@ -1755,8 +1816,6 @@
                                     </tbody>
                                 </table>
                             </div>
-
-                            <!-- Observaciones -->
                             <div class="form-group mt-3">
                                 <label class="font-weight-bold">Observaciones</label>
                                 <textarea class="form-control" id="txtObservacionesFism" rows="3"
@@ -1765,71 +1824,141 @@
                         </div>
                     </div>
 
-                    
-                    <!-- ── FOTOS ─────────────────────────────────────────── -->
+                    <!-- ── EVIDENCIA FOTOGRÁFICA CON GEOREFERENCIA ─────────── -->
                     <div class="card shadow-sm mb-3 border-0">
                         <div class="card-header py-2" style="background:#00695c;">
                             <span class="text-white font-weight-bold">
-                                <i class="fas fa-camera mr-1"></i> Evidencia Fotográfica
+                                <i class="fas fa-camera mr-1"></i> Evidencia Fotográfica Georeferenciada
                             </span>
                         </div>
                         <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Registre una foto con georeferencia para cada etapa: Inicio, Intermedio y Final.
+                            </p>
                             <div class="row">
-                                <!-- FOTO 1 -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="font-weight-bold">
-                                        <i class="fas fa-image text-success mr-1"></i> Foto 1
-                                    </label>
-                                    <!-- Botones descargar/eliminar (ocultos hasta que haya foto) -->
-                                    <div id="accionesFoto1Fism" style="display:none;" class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-success mr-1"
-                                                onclick="CedulaModule.descargarFotoFism(1)">
-                                            <i class="fas fa-download"></i> Descargar
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="CedulaModule.eliminarFotoFism(1)">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
+
+                                <!-- ── FOTO INICIO ── -->
+                                <div class="col-md-4 mb-4">
+                                    <div class="card border-success h-100">
+                                        <div class="card-header py-2" style="background:#2e7d32;">
+                                            <span class="text-white font-weight-bold small">
+                                                <i class="fas fa-flag mr-1"></i> INICIO
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="accionesFotoInicioFism" style="display:none;" class="mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="CedulaModule.eliminarFotoGeoFism('inicio')">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            </div>
+                                            <img id="imgFotoInicioFism" class="img-fluid rounded shadow-sm mb-2 w-100"
+                                                 style="display:none; max-height:150px; object-fit:cover; cursor:pointer;"
+                                                 onclick="window.open(this.src,'_blank')" title="Ver foto completa">
+                                            <div id="placeholderFotoInicioFism" class="text-center text-muted py-3 small">
+                                                <i class="fas fa-image fa-2x d-block mb-1"></i> Sin foto
+                                            </div>
+                                            <input type="file" class="form-control form-control-sm mt-1 file-foto-geo-fism"
+                                                   id="fileFotoInicioFism" data-etapa="inicio" accept="image/*">
+                                            <input type="hidden" id="hddRutaFotoInicioFism">
+                                            <div class="row mt-2">
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Latitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlatitudinicio" placeholder="16.9952...">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Longitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlongitudinicio" placeholder="-92.1068...">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <!-- Imagen (oculta hasta que haya foto) -->
-                                    <img id="imgFoto1Fism" class="img-fluid rounded shadow-sm mb-2"
-                                         style="display:none; max-height:160px; cursor:pointer; border:2px solid #dee2e6;"
-                                         onclick="window.open(this.src,'_blank')" title="Ver foto completa">
-                                    <!-- Placeholder cuando no hay foto -->
-                                    <div id="placeholderFoto1Fism" class="text-muted py-2 small">
-                                        <i class="fas fa-image mr-1"></i> Sin foto guardada
-                                    </div>
-                                    <!-- Input file simple (no custom-file para evitar cache del nombre) -->
-                                    <input type="file" class="form-control form-control-sm mt-2"
-                                           id="fileFoto1Fism" accept="image/*">
-                                    <input type="hidden" id="hddRutaFoto1Fism">
                                 </div>
-                                <!-- FOTO 2 -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="font-weight-bold">
-                                        <i class="fas fa-image text-success mr-1"></i> Foto 2
-                                    </label>
-                                    <div id="accionesFoto2Fism" style="display:none;" class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-success mr-1"
-                                                onclick="CedulaModule.descargarFotoFism(2)">
-                                            <i class="fas fa-download"></i> Descargar
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="CedulaModule.eliminarFotoFism(2)">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
+
+                                <!-- ── FOTO INTERMEDIO ── -->
+                                <div class="col-md-4 mb-4">
+                                    <div class="card border-warning h-100">
+                                        <div class="card-header py-2" style="background:#f57f17;">
+                                            <span class="text-white font-weight-bold small">
+                                                <i class="fas fa-tools mr-1"></i> INTERMEDIO
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="accionesFotoIntermedioFism" style="display:none;" class="mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="CedulaModule.eliminarFotoGeoFism('intermedio')">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            </div>
+                                            <img id="imgFotoIntermedioFism" class="img-fluid rounded shadow-sm mb-2 w-100"
+                                                 style="display:none; max-height:150px; object-fit:cover; cursor:pointer;"
+                                                 onclick="window.open(this.src,'_blank')" title="Ver foto completa">
+                                            <div id="placeholderFotoIntermedioFism" class="text-center text-muted py-3 small">
+                                                <i class="fas fa-image fa-2x d-block mb-1"></i> Sin foto
+                                            </div>
+                                            <input type="file" class="form-control form-control-sm mt-1 file-foto-geo-fism"
+                                                   id="fileFotoIntermedioFism" data-etapa="intermedio" accept="image/*">
+                                            <input type="hidden" id="hddRutaFotoIntermedioFism">
+                                            <div class="row mt-2">
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Latitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlatitudintermedio" placeholder="16.9952...">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Longitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlongitudintermedio" placeholder="-92.1068...">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <img id="imgFoto2Fism" class="img-fluid rounded shadow-sm mb-2"
-                                         style="display:none; max-height:160px; cursor:pointer; border:2px solid #dee2e6;"
-                                         onclick="window.open(this.src,'_blank')" title="Ver foto completa">
-                                    <div id="placeholderFoto2Fism" class="text-muted py-2 small">
-                                        <i class="fas fa-image mr-1"></i> Sin foto guardada
-                                    </div>
-                                    <input type="file" class="form-control form-control-sm mt-2"
-                                           id="fileFoto2Fism" accept="image/*">
-                                    <input type="hidden" id="hddRutaFoto2Fism">
                                 </div>
-                            </div>
+
+                                <!-- ── FOTO FINAL ── -->
+                                <div class="col-md-4 mb-4">
+                                    <div class="card border-danger h-100">
+                                        <div class="card-header py-2" style="background:#b71c1c;">
+                                            <span class="text-white font-weight-bold small">
+                                                <i class="fas fa-check-circle mr-1"></i> FINAL
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="accionesFotoFinalFismGeo" style="display:none;" class="mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="CedulaModule.eliminarFotoGeoFism('final')">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            </div>
+                                            <img id="imgFotoFinalFism" class="img-fluid rounded shadow-sm mb-2 w-100"
+                                                 style="display:none; max-height:150px; object-fit:cover; cursor:pointer;"
+                                                 onclick="window.open(this.src,'_blank')" title="Ver foto completa">
+                                            <div id="placeholderFotoFinalFism" class="text-center text-muted py-3 small">
+                                                <i class="fas fa-image fa-2x d-block mb-1"></i> Sin foto
+                                            </div>
+                                            <input type="file" class="form-control form-control-sm mt-1 file-foto-geo-fism"
+                                                   id="fileFotoFinalFism" data-etapa="final" accept="image/*">
+                                            <input type="hidden" id="hddRutaFotoFinalFism">
+                                            <div class="row mt-2">
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Latitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlatitudfinal" placeholder="16.9973...">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="small mb-0 font-weight-bold">Longitud</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           id="txtlongitudfinal" placeholder="-92.1029...">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div><!-- /row fotos -->
                         </div>
                     </div>
 
@@ -1837,7 +1966,6 @@
 
                 <!-- FOOTER -->
                 <div class="modal-footer" style="background:#f1f1f1; border-top:2px solid #dee2e6;">
-                    <!-- Hidden fields para lógica JS -->
                     <input type="hidden" id="hddIdAccionFism">
                     <input type="hidden" id="hddIdObraFism">
                     <input type="hidden" id="hddAccionMovFism" value="A">

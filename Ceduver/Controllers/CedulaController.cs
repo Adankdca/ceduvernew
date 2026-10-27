@@ -2080,26 +2080,52 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                     {
                         return Ok(new
                         {
-                            idFichaTecnica = reader["idfichatecnica"],
-                            inversionProgramadaFism = reader["inversionprogramadafism"] != DBNull.Value ? Convert.ToDecimal(reader["inversionprogramadafism"]) : 0,
-                            inversionEjercidaFism = reader["inversionejercidafism"] != DBNull.Value ? Convert.ToDecimal(reader["inversionejercidafism"]) : 0,
-                            aportacionProgramadaFism = reader["aportacionprogramadafism"] != DBNull.Value ? Convert.ToDecimal(reader["aportacionprogramadafism"]) : 0,
-                            aportacionEjercidaFism = reader["aportacionejercidafism"] != DBNull.Value ? Convert.ToDecimal(reader["aportacionejercidafism"]) : 0,
-                            dictamen = reader["dictamen"].ToString(),
-                            programadoFechaInicial = reader["programadofechainicial"] != DBNull.Value ? Convert.ToDateTime(reader["programadofechainicial"]).ToString("dd/MM/yyyy") : "",
-                            programadoFechaFinal = reader["programadofechafinal"] != DBNull.Value ? Convert.ToDateTime(reader["programadofechafinal"]).ToString("dd/MM/yyyy") : "",
-                            convenioContratoImporte = reader["conveniocontratoimporte"] != DBNull.Value ? Convert.ToDecimal(reader["conveniocontratoimporte"]) : 0,
+                            idFichaTecnica              = reader["idfichatecnica"],
+                            // Financiero existente
+                            inversionProgramadaFism     = reader["inversionprogramadafism"]  != DBNull.Value ? Convert.ToDecimal(reader["inversionprogramadafism"])  : 0,
+                            inversionEjercidaFism       = reader["inversionejercidafism"]    != DBNull.Value ? Convert.ToDecimal(reader["inversionejercidafism"])    : 0,
+                            aportacionProgramadaFism    = reader["aportacionprogramadafism"] != DBNull.Value ? Convert.ToDecimal(reader["aportacionprogramadafism"]) : 0,
+                            aportacionEjercidaFism      = reader["aportacionejercidafism"]   != DBNull.Value ? Convert.ToDecimal(reader["aportacionejercidafism"])   : 0,
+                            // Otros/Total financiero
+                            otrosprogramado             = reader["otrosprogramado"]   != DBNull.Value ? Convert.ToDecimal(reader["otrosprogramado"])   : 0,
+                            otrosejercida               = reader["otrosejercida"]     != DBNull.Value ? Convert.ToDecimal(reader["otrosejercida"])     : 0,
+                            // Saldo
+                            saldofism                   = reader["saldofism"]         != DBNull.Value ? Convert.ToDecimal(reader["saldofism"])         : 0,
+                            aportacionfism              = reader["aportacionfism"]    != DBNull.Value ? Convert.ToDecimal(reader["aportacionfism"])    : 0,
+                            otrossaldofism              = reader["otrossaldofism"]    != DBNull.Value ? Convert.ToDecimal(reader["otrossaldofism"])    : 0,
+                            // Dictamen y fechas
+                            dictamen                    = reader["dictamen"].ToString(),
+                            programadoFechaInicial      = reader["programadofechainicial"] != DBNull.Value ? Convert.ToDateTime(reader["programadofechainicial"]).ToString("dd/MM/yyyy") : "",
+                            programadoFechaFinal        = reader["programadofechafinal"]   != DBNull.Value ? Convert.ToDateTime(reader["programadofechafinal"]).ToString("dd/MM/yyyy")   : "",
+                            // Convenios
+                            convenioContratoImporte     = reader["conveniocontratoimporte"]    != DBNull.Value ? Convert.ToDecimal(reader["conveniocontratoimporte"])    : 0,
                             convenioContratoFechaInicio = reader["conveniocontratofechainicio"] != DBNull.Value ? Convert.ToDateTime(reader["conveniocontratofechainicio"]).ToString("dd/MM/yyyy") : "",
-                            convenioContratoFechaFin = reader["conveniocontratofechafin"] != DBNull.Value ? Convert.ToDateTime(reader["conveniocontratofechafin"]).ToString("dd/MM/yyyy") : "",
-                            convenioDiferidoImporte = reader["conveniodiferidoimporte"] != DBNull.Value ? Convert.ToDecimal(reader["conveniodiferidoimporte"]) : 0,
+                            convenioContratoFechaFin    = reader["conveniocontratofechafin"]   != DBNull.Value ? Convert.ToDateTime(reader["conveniocontratofechafin"]).ToString("dd/MM/yyyy")   : "",
+                            convenioDiferidoImporte     = reader["conveniodiferidoimporte"]    != DBNull.Value ? Convert.ToDecimal(reader["conveniodiferidoimporte"])    : 0,
                             convenioDiferidoFechaInicio = reader["conveniodiferidofechainicio"] != DBNull.Value ? Convert.ToDateTime(reader["conveniodiferidofechainicio"]).ToString("dd/MM/yyyy") : "",
-                            convenioDiferidoFechaFin = reader["conveniodiferidofechafin"] != DBNull.Value ? Convert.ToDateTime(reader["conveniodiferidofechafin"]).ToString("dd/MM/yyyy") : "",
-                            ampliacionPlazoImporte = reader["ampliacionplazoimporte"] != DBNull.Value ? Convert.ToDecimal(reader["ampliacionplazoimporte"]) : 0,
-                            ampliacionPlazoFechaInicio = reader["ampliacionplazofechainicio"] != DBNull.Value ? Convert.ToDateTime(reader["ampliacionplazofechainicio"]).ToString("dd/MM/yyyy") : "",
-                            ampliacionPlazoFechaFin = reader["ampliacionplazofechafin"] != DBNull.Value ? Convert.ToDateTime(reader["ampliacionplazofechafin"]).ToString("dd/MM/yyyy") : "",
-                            observaciones = reader["observaciones"].ToString(),
-                            foto1 = reader["foto1"].ToString(),
-                            foto2 = reader["foto2"].ToString()
+                            convenioDiferidoFechaFin    = reader["conveniodiferidofechafin"]   != DBNull.Value ? Convert.ToDateTime(reader["conveniodiferidofechafin"]).ToString("dd/MM/yyyy")   : "",
+                            ampliacionPlazoImporte      = reader["ampliacionplazoimporte"]     != DBNull.Value ? Convert.ToDecimal(reader["ampliacionplazoimporte"])     : 0,
+                            ampliacionPlazoFechaInicio  = reader["ampliacionplazofechainicio"] != DBNull.Value ? Convert.ToDateTime(reader["ampliacionplazofechainicio"]).ToString("dd/MM/yyyy") : "",
+                            ampliacionPlazoFechaFin     = reader["ampliacionplazofechafin"]    != DBNull.Value ? Convert.ToDateTime(reader["ampliacionplazofechafin"]).ToString("dd/MM/yyyy")    : "",
+                            observaciones               = reader["observaciones"].ToString(),
+                            // Oficios (nuevos)
+                            oficioreg                   = reader["oficioreg"]    != DBNull.Value ? reader["oficioreg"].ToString()    : "",
+                            numobramun                  = reader["numobramun"]   != DBNull.Value ? reader["numobramun"].ToString()   : "",
+                            // Descripción obra FISM (nuevo)
+                            descripcionobrafism         = reader["descripcionobrafism"] != DBNull.Value ? reader["descripcionobrafism"].ToString() : "",
+                            // Avances (nuevos)
+                            avancefisicofism            = reader["avancefisicofism"]     != DBNull.Value ? Convert.ToDecimal(reader["avancefisicofism"])     : 0,
+                            avancefinancierofism        = reader["avancefinancierofism"]  != DBNull.Value ? Convert.ToDecimal(reader["avancefinancierofism"])  : 0,
+                            // Fotos georeferenciadas
+                            fotoinicio                  = reader["fotoinicio"]        != DBNull.Value ? reader["fotoinicio"].ToString()        : "",
+                            latitudinicio               = reader["latitudinicio"]     != DBNull.Value ? reader["latitudinicio"].ToString()     : "",
+                            longitudinicio              = reader["longitudinicio"]    != DBNull.Value ? reader["longitudinicio"].ToString()    : "",
+                            fotointermedio              = reader["fotointermedio"]    != DBNull.Value ? reader["fotointermedio"].ToString()    : "",
+                            latitudintermedio           = reader["latitudintermedio"] != DBNull.Value ? reader["latitudintermedio"].ToString() : "",
+                            longitudintermedio          = reader["longitudintermedio"]!= DBNull.Value ? reader["longitudintermedio"].ToString(): "",
+                            fotofinal                   = reader["fotofinal"]         != DBNull.Value ? reader["fotofinal"].ToString()         : "",
+                            latitudfinal                = reader["latitudfinal"]      != DBNull.Value ? reader["latitudfinal"].ToString()      : "",
+                            longitudfinal               = reader["longitudfinal"]     != DBNull.Value ? reader["longitudfinal"].ToString()     : ""
                         });
                     }
                 }
@@ -2117,46 +2143,71 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
 
             try
             {
-                // ── Datos del encabezado (hidden + labels del modal) ──────────
-                long idAcciones = Convert.ToInt64(httpRequest.Form["IdAcciones"]);
+                // ── Datos del encabezado ──────────────────────────────────────
+                long idAcciones     = Convert.ToInt64(httpRequest.Form["IdAcciones"]);
                 long idObraProyecto = Convert.ToInt64(httpRequest.Form["IdObraProyecto"]);
-                string accionMov = httpRequest.Form["AccionMov"] ?? "A";
-                long idPrograma = 0;
+                string accionMov    = httpRequest.Form["AccionMov"] ?? "A";
+                long idPrograma     = 0;
                 long.TryParse(httpRequest.Form["IdPrograma"], out idPrograma);
 
-                string programa = httpRequest.Form["Programa"] ?? "";
-                string obra = httpRequest.Form["Obra"] ?? "";
-                string localidad = httpRequest.Form["Localidad"] ?? "";
+                string programa       = httpRequest.Form["Programa"]       ?? "";
+                string obra           = httpRequest.Form["Obra"]           ?? "";
+                string localidad      = httpRequest.Form["Localidad"]      ?? "";
                 string claveLocalidad = httpRequest.Form["ClaveLocalidad"] ?? "";
-                string descripcionObra = httpRequest.Form["DescripcionObra"] ?? "";
-                string contrato = httpRequest.Form["Contrato"] ?? "";
-                string periodoInicio = httpRequest.Form["PeriodoInicio"] ?? "";
-                string periodoFin = httpRequest.Form["PeriodoFin"] ?? "";
+                string descripcionObra= httpRequest.Form["DescripcionObra"]?? "";
+                string contrato       = httpRequest.Form["Contrato"]       ?? "";
+                string periodoInicio  = httpRequest.Form["PeriodoInicio"]  ?? "";
+                string periodoFin     = httpRequest.Form["PeriodoFin"]     ?? "";
 
-                // ── Campos numéricos ──────────────────────────────────────────
-                decimal invProg = ParseDecimal(httpRequest.Form["InversionProgramadaFism"]);
-                decimal invEjer = ParseDecimal(httpRequest.Form["InversionEjercidaFism"]);
+                // ── Financiero existente ─────────────────────────────────────
+                decimal invProg   = ParseDecimal(httpRequest.Form["InversionProgramadaFism"]);
+                decimal invEjer   = ParseDecimal(httpRequest.Form["InversionEjercidaFism"]);
                 decimal aportProg = ParseDecimal(httpRequest.Form["AportacionProgramadaFism"]);
                 decimal aportEjer = ParseDecimal(httpRequest.Form["AportacionEjercidaFism"]);
+                // Otros
+                decimal otrosProg = ParseDecimal(httpRequest.Form["OtrosProgramado"]);
+                decimal otrosEjer = ParseDecimal(httpRequest.Form["OtrosEjercida"]);
+                // Totales (calculados en JS, se almacenan por referencia)
+                decimal totProg   = ParseDecimal(httpRequest.Form["TotalProgramado"]);
+                decimal totEjer   = ParseDecimal(httpRequest.Form["TotalEjercida"]);
+                // Saldo
+                decimal saldoFism     = ParseDecimal(httpRequest.Form["SaldoFism"]);
+                decimal aportFism     = ParseDecimal(httpRequest.Form["AportacionFism"]);
+                decimal otrosSaldo    = ParseDecimal(httpRequest.Form["OtrosSaldoFism"]);
+                decimal totalSaldo    = ParseDecimal(httpRequest.Form["TotalSaldo"]);
+
                 string dictamen = httpRequest.Form["Dictamen"] ?? "";
 
-                // ── Campos fecha (vienen dd/MM/yyyy del datepicker) ───────────
+                // ── Fechas ───────────────────────────────────────────────────
                 DateTime fechaInicioProg = ParseFecha(httpRequest.Form["ProgramadoFechaInicial"]);
-                DateTime fechaFinalProg = ParseFecha(httpRequest.Form["ProgramadoFechaFinal"]);
-                decimal contratoImporte = ParseDecimal(httpRequest.Form["ConvenioContratoImporte"]);
-                DateTime contratoFechaIni = ParseFecha(httpRequest.Form["ConvenioContratoFechaInicio"]);
-                DateTime contratoFechaFin = ParseFecha(httpRequest.Form["ConvenioContratoFechaFin"]);
-                decimal difeImporte = ParseDecimal(httpRequest.Form["ConvenioDiferidoImporte"]);
-                DateTime difeFechaIni = ParseFecha(httpRequest.Form["ConvenioDiferidoFechaInicio"]);
-                DateTime difeFechaFin = ParseFecha(httpRequest.Form["ConvenioDiferidoFechaFin"]);
-                decimal ampImporte = ParseDecimal(httpRequest.Form["AmpliacionPlazoImporte"]);
-                DateTime ampFechaIni = ParseFecha(httpRequest.Form["AmpliacionPlazoFechaInicio"]);
-                DateTime ampFechaFin = ParseFecha(httpRequest.Form["AmpliacionPlazoFechaFin"]);
-                string observaciones = httpRequest.Form["Observaciones"] ?? "";
+                DateTime fechaFinalProg  = ParseFecha(httpRequest.Form["ProgramadoFechaFinal"]);
+                decimal  contratoImporte = ParseDecimal(httpRequest.Form["ConvenioContratoImporte"]);
+                DateTime contratoFechaIni= ParseFecha(httpRequest.Form["ConvenioContratoFechaInicio"]);
+                DateTime contratoFechaFin= ParseFecha(httpRequest.Form["ConvenioContratoFechaFin"]);
+                decimal  difeImporte     = ParseDecimal(httpRequest.Form["ConvenioDiferidoImporte"]);
+                DateTime difeFechaIni    = ParseFecha(httpRequest.Form["ConvenioDiferidoFechaInicio"]);
+                DateTime difeFechaFin    = ParseFecha(httpRequest.Form["ConvenioDiferidoFechaFin"]);
+                decimal  ampImporte      = ParseDecimal(httpRequest.Form["AmpliacionPlazoImporte"]);
+                DateTime ampFechaIni     = ParseFecha(httpRequest.Form["AmpliacionPlazoFechaInicio"]);
+                DateTime ampFechaFin     = ParseFecha(httpRequest.Form["AmpliacionPlazoFechaFin"]);
+                string   observaciones   = httpRequest.Form["Observaciones"] ?? "";
 
-                // ── Periodo del encabezado (viene dd/MM/yyyy del label) ───────
+                // ── Nuevos campos ────────────────────────────────────────────
+                string  oficioreg           = httpRequest.Form["Oficioreg"]           ?? "";
+                string  numobramun          = httpRequest.Form["Numobramun"]          ?? "";
+                string  descripcionObrafism = httpRequest.Form["Descripcionobrafism"] ?? "";
+                decimal avanceFisico        = ParseDecimal(httpRequest.Form["Avancefisicofism"]);
+                decimal avanceFinanciero    = ParseDecimal(httpRequest.Form["Avancefinancierofism"]);
+                // Coordenadas fotos
+                string latInicio  = httpRequest.Form["Latitudinicio"]     ?? "";
+                string lonInicio  = httpRequest.Form["Longitudinicio"]    ?? "";
+                string latInterm  = httpRequest.Form["Latitudintermedio"] ?? "";
+                string lonInterm  = httpRequest.Form["Longitudintermedio"]?? "";
+                string latFinal   = httpRequest.Form["Latitudfinal"]      ?? "";
+                string lonFinal   = httpRequest.Form["Longitudfinal"]     ?? "";
+
                 DateTime perInicio = ParseFecha(periodoInicio);
-                DateTime perFin = ParseFecha(periodoFin);
+                DateTime perFin    = ParseFecha(periodoFin);
 
                 long idFichaTecnica = 0;
 
@@ -2175,59 +2226,61 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                             (IDobraproyecto, IDAcciones, estado, municipio,
                              localidad, clavelocalidad, idprograma, programa, obra,
                              inversionprogramadafism, aportacionprogramadafism,
-                             inversionejercidafism,  aportacionejercidafism,
+                             inversionejercidafism,   aportacionejercidafism,
+                             otrosprogramado, otrosejercida,
+                             totalprogramado, totalejercida,
+                             saldofism, aportacionfism, otrossaldofism, totalsaldo,
                              descripcionobra, contrato, dictamen,
                              periodoejecucioninicial, periodoejecucionfinal,
                              programadofechainicial,  programadofechafinal,
                              conveniocontratoimporte, conveniocontratofechainicio, conveniocontratofechafin,
                              conveniodiferidoimporte, conveniodiferidofechainicio, conveniodiferidofechafin,
                              ampliacionplazoimporte,  ampliacionplazofechainicio,  ampliacionplazofechafin,
-                             observaciones)
+                             observaciones,
+                             oficioreg, numobramun,
+                             descripcionobrafism,
+                             avancefisicofism, avancefinancierofism,
+                             latitudinicio,  longitudinicio,
+                             latitudintermedio, longitudintermedio,
+                             latitudfinal,   longitudfinal)
                             VALUES
                             (@idObra, @idAcciones, '07', '061',
                              @localidad, @claveLocalidad, @idPrograma, @programa, @obra,
-                             @invProg, @aportProg, @invEjer, @aportEjer,
+                             @invProg,   @aportProg,
+                             @invEjer,   @aportEjer,
+                             @otrosProg, @otrosEjer,
+                             @totProg,   @totEjer,
+                             @saldoFism, @aportFism, @otrosSaldo, @totalSaldo,
                              @descripcion, @contrato, @dictamen,
                              @perInicio, @perFin,
                              @fechaInicioProg, @fechaFinalProg,
                              @contratoImporte, @contratoFechaIni, @contratoFechaFin,
-                             @difeImporte, @difeFechaIni, @difeFechaFin,
-                             @ampImporte,  @ampFechaIni,  @ampFechaFin,
-                             @observaciones);
+                             @difeImporte,     @difeFechaIni,     @difeFechaFin,
+                             @ampImporte,      @ampFechaIni,      @ampFechaFin,
+                             @observaciones,
+                             @oficioreg, @numobramun,
+                             @descripcionObrafism,
+                             @avanceFisico, @avanceFinanciero,
+                             @latInicio,  @lonInicio,
+                             @latInterm,  @lonInterm,
+                             @latFinal,   @lonFinal);
                             SELECT CAST(SCOPE_IDENTITY() AS bigint);";
 
                         var cmd = new SqlCommand(sql, conn);
-                        cmd.Parameters.AddWithValue("@idObra", idObraProyecto);
-                        cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
-                        cmd.Parameters.AddWithValue("@localidad", localidad);
-                        cmd.Parameters.AddWithValue("@claveLocalidad", claveLocalidad);
-                        cmd.Parameters.AddWithValue("@idPrograma", idPrograma);
-                        cmd.Parameters.AddWithValue("@programa", programa);
-                        cmd.Parameters.AddWithValue("@obra", obra);
-                        cmd.Parameters.AddWithValue("@invProg", invProg);
-                        cmd.Parameters.AddWithValue("@aportProg", aportProg);
-                        cmd.Parameters.AddWithValue("@invEjer", invEjer);
-                        cmd.Parameters.AddWithValue("@aportEjer", aportEjer);
-                        cmd.Parameters.AddWithValue("@descripcion", descripcionObra);
-                        cmd.Parameters.AddWithValue("@contrato", contrato);
-                        cmd.Parameters.AddWithValue("@dictamen", dictamen);
-                        cmd.Parameters.AddWithValue("@perInicio", perInicio);
-                        cmd.Parameters.AddWithValue("@perFin", perFin);
-                        cmd.Parameters.AddWithValue("@fechaInicioProg", fechaInicioProg);
-                        cmd.Parameters.AddWithValue("@fechaFinalProg", fechaFinalProg);
-                        cmd.Parameters.AddWithValue("@contratoImporte", contratoImporte);
-                        cmd.Parameters.AddWithValue("@contratoFechaIni", contratoFechaIni);
-                        cmd.Parameters.AddWithValue("@contratoFechaFin", contratoFechaFin);
-                        cmd.Parameters.AddWithValue("@difeImporte", difeImporte);
-                        cmd.Parameters.AddWithValue("@difeFechaIni", difeFechaIni);
-                        cmd.Parameters.AddWithValue("@difeFechaFin", difeFechaFin);
-                        cmd.Parameters.AddWithValue("@ampImporte", ampImporte);
-                        cmd.Parameters.AddWithValue("@ampFechaIni", ampFechaIni);
-                        cmd.Parameters.AddWithValue("@ampFechaFin", ampFechaFin);
-                        cmd.Parameters.AddWithValue("@observaciones", observaciones);
+                        AgregarParamsFism(cmd, idObraProyecto, idAcciones, localidad, claveLocalidad,
+                            idPrograma, programa, obra, invProg, aportProg, invEjer, aportEjer,
+                            otrosProg, otrosEjer, totProg, totEjer,
+                            saldoFism, aportFism, otrosSaldo, totalSaldo,
+                            descripcionObra, contrato, dictamen, perInicio, perFin,
+                            fechaInicioProg, fechaFinalProg,
+                            contratoImporte, contratoFechaIni, contratoFechaFin,
+                            difeImporte, difeFechaIni, difeFechaFin,
+                            ampImporte, ampFechaIni, ampFechaFin, observaciones,
+                            oficioreg, numobramun, descripcionObrafism,
+                            avanceFisico, avanceFinanciero,
+                            latInicio, lonInicio, latInterm, lonInterm, latFinal, lonFinal);
 
                         var resultado = cmd.ExecuteScalar();
-                        // ⚠️  CLAVE: necesitamos el ID para guardar las fotos (igual que VS2005)
                         idFichaTecnica = resultado != null ? Convert.ToInt64(resultado) : 0;
                     }
                     // ── UPDATE ────────────────────────────────────────────────
@@ -2235,68 +2288,70 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                     {
                         string sql = @"
                             UPDATE tblp_fichatecnicafism SET
-                             IDobraproyecto            = @idObra,
-                             IDAcciones                = @idAcciones,
-                             localidad                 = @localidad,
-                             clavelocalidad            = @claveLocalidad,
-                             idprograma                = @idPrograma,
-                             programa                  = @programa,
-                             obra                      = @obra,
-                             inversionprogramadafism   = @invProg,
-                             aportacionprogramadafism  = @aportProg,
-                             inversionejercidafism     = @invEjer,
-                             aportacionejercidafism    = @aportEjer,
-                             descripcionobra           = @descripcion,
-                             contrato                  = @contrato,
-                             dictamen                  = @dictamen,
-                             periodoejecucioninicial   = @perInicio,
-                             periodoejecucionfinal     = @perFin,
-                             programadofechainicial    = @fechaInicioProg,
-                             programadofechafinal      = @fechaFinalProg,
-                             conveniocontratoimporte   = @contratoImporte,
-                             conveniocontratofechainicio = @contratoFechaIni,
-                             conveniocontratofechafin  = @contratoFechaFin,
-                             conveniodiferidoimporte   = @difeImporte,
-                             conveniodiferidofechainicio = @difeFechaIni,
-                             conveniodiferidofechafin  = @difeFechaFin,
-                             ampliacionplazoimporte    = @ampImporte,
-                             ampliacionplazofechainicio= @ampFechaIni,
-                             ampliacionplazofechafin   = @ampFechaFin,
-                             observaciones             = @observaciones
+                             IDobraproyecto             = @idObra,
+                             IDAcciones                 = @idAcciones,
+                             localidad                  = @localidad,
+                             clavelocalidad             = @claveLocalidad,
+                             idprograma                 = @idPrograma,
+                             programa                   = @programa,
+                             obra                       = @obra,
+                             inversionprogramadafism    = @invProg,
+                             aportacionprogramadafism   = @aportProg,
+                             inversionejercidafism      = @invEjer,
+                             aportacionejercidafism     = @aportEjer,
+                             otrosprogramado            = @otrosProg,
+                             otrosejercida              = @otrosEjer,
+                             totalprogramado            = @totProg,
+                             totalejercida              = @totEjer,
+                             saldofism                  = @saldoFism,
+                             aportacionfism             = @aportFism,
+                             otrossaldofism             = @otrosSaldo,
+                             totalsaldo                 = @totalSaldo,
+                             descripcionobra            = @descripcion,
+                             contrato                   = @contrato,
+                             dictamen                   = @dictamen,
+                             periodoejecucioninicial    = @perInicio,
+                             periodoejecucionfinal      = @perFin,
+                             programadofechainicial     = @fechaInicioProg,
+                             programadofechafinal       = @fechaFinalProg,
+                             conveniocontratoimporte    = @contratoImporte,
+                             conveniocontratofechainicio= @contratoFechaIni,
+                             conveniocontratofechafin   = @contratoFechaFin,
+                             conveniodiferidoimporte    = @difeImporte,
+                             conveniodiferidofechainicio= @difeFechaIni,
+                             conveniodiferidofechafin   = @difeFechaFin,
+                             ampliacionplazoimporte     = @ampImporte,
+                             ampliacionplazofechainicio = @ampFechaIni,
+                             ampliacionplazofechafin    = @ampFechaFin,
+                             observaciones              = @observaciones,
+                             oficioreg                  = @oficioreg,
+                             numobramun                 = @numobramun,
+                             descripcionobrafism        = @descripcionObrafism,
+                             avancefisicofism           = @avanceFisico,
+                             avancefinancierofism       = @avanceFinanciero,
+                             latitudinicio              = @latInicio,
+                             longitudinicio             = @lonInicio,
+                             latitudintermedio          = @latInterm,
+                             longitudintermedio         = @lonInterm,
+                             latitudfinal               = @latFinal,
+                             longitudfinal              = @lonFinal
                             WHERE IDAcciones = @idAcciones";
 
                         var cmd = new SqlCommand(sql, conn);
-                        cmd.Parameters.AddWithValue("@idObra", idObraProyecto);
-                        cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
-                        cmd.Parameters.AddWithValue("@localidad", localidad);
-                        cmd.Parameters.AddWithValue("@claveLocalidad", claveLocalidad);
-                        cmd.Parameters.AddWithValue("@idPrograma", idPrograma);
-                        cmd.Parameters.AddWithValue("@programa", programa);
-                        cmd.Parameters.AddWithValue("@obra", obra);
-                        cmd.Parameters.AddWithValue("@invProg", invProg);
-                        cmd.Parameters.AddWithValue("@aportProg", aportProg);
-                        cmd.Parameters.AddWithValue("@invEjer", invEjer);
-                        cmd.Parameters.AddWithValue("@aportEjer", aportEjer);
-                        cmd.Parameters.AddWithValue("@descripcion", descripcionObra);
-                        cmd.Parameters.AddWithValue("@contrato", contrato);
-                        cmd.Parameters.AddWithValue("@dictamen", dictamen);
-                        cmd.Parameters.AddWithValue("@perInicio", perInicio);
-                        cmd.Parameters.AddWithValue("@perFin", perFin);
-                        cmd.Parameters.AddWithValue("@fechaInicioProg", fechaInicioProg);
-                        cmd.Parameters.AddWithValue("@fechaFinalProg", fechaFinalProg);
-                        cmd.Parameters.AddWithValue("@contratoImporte", contratoImporte);
-                        cmd.Parameters.AddWithValue("@contratoFechaIni", contratoFechaIni);
-                        cmd.Parameters.AddWithValue("@contratoFechaFin", contratoFechaFin);
-                        cmd.Parameters.AddWithValue("@difeImporte", difeImporte);
-                        cmd.Parameters.AddWithValue("@difeFechaIni", difeFechaIni);
-                        cmd.Parameters.AddWithValue("@difeFechaFin", difeFechaFin);
-                        cmd.Parameters.AddWithValue("@ampImporte", ampImporte);
-                        cmd.Parameters.AddWithValue("@ampFechaIni", ampFechaIni);
-                        cmd.Parameters.AddWithValue("@ampFechaFin", ampFechaFin);
-                        cmd.Parameters.AddWithValue("@observaciones", observaciones);
+                        AgregarParamsFism(cmd, idObraProyecto, idAcciones, localidad, claveLocalidad,
+                            idPrograma, programa, obra, invProg, aportProg, invEjer, aportEjer,
+                            otrosProg, otrosEjer, totProg, totEjer,
+                            saldoFism, aportFism, otrosSaldo, totalSaldo,
+                            descripcionObra, contrato, dictamen, perInicio, perFin,
+                            fechaInicioProg, fechaFinalProg,
+                            contratoImporte, contratoFechaIni, contratoFechaFin,
+                            difeImporte, difeFechaIni, difeFechaFin,
+                            ampImporte, ampFechaIni, ampFechaFin, observaciones,
+                            oficioreg, numobramun, descripcionObrafism,
+                            avanceFisico, avanceFinanciero,
+                            latInicio, lonInicio, latInterm, lonInterm, latFinal, lonFinal);
                         cmd.ExecuteNonQuery();
 
-                        // Obtener el id para actualizar fotos
                         var cmdId = new SqlCommand(
                             "SELECT idfichatecnica FROM tblp_fichatecnicafism WHERE IDAcciones = @idAcciones", conn);
                         cmdId.Parameters.AddWithValue("@idAcciones", idAcciones);
@@ -2304,11 +2359,12 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                         idFichaTecnica = res != null ? Convert.ToInt64(res) : 0;
                     }
 
-                    // ── Guardar fotos (igual que VS2005: UPDATE con byte[] tras INSERT/UPDATE) ──
+                    // ── Guardar 3 fotos georeferenciadas ─────────────────────
                     if (idFichaTecnica > 0)
                     {
-                        GuardarFotoFism(conn, httpRequest, "Foto1", "imgfoto1", "foto1", idFichaTecnica, ruta, rutaFisica);
-                        GuardarFotoFism(conn, httpRequest, "Foto2", "imgfoto2", "foto2", idFichaTecnica, ruta, rutaFisica);
+                        GuardarFotoFism(conn, httpRequest, "FotoInicio",    "imgfotoinicio",    "fotoinicio",    idFichaTecnica, ruta, rutaFisica);
+                        GuardarFotoFism(conn, httpRequest, "FotoIntermedio","imgfotointermedio","fotointermedio",idFichaTecnica, ruta, rutaFisica);
+                        GuardarFotoFism(conn, httpRequest, "FotoFinal",     "imgfotofinal",     "fotofinal",     idFichaTecnica, ruta, rutaFisica);
                     }
                 }
 
@@ -2319,6 +2375,75 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                 return BadRequest("Error al guardar Ficha FISM: " + ex.Message);
             }
         }
+
+        // ── Helper: agrega todos los parámetros a un SqlCommand de Ficha FISM ────────
+        private static void AgregarParamsFism(SqlCommand cmd,
+            long idObra, long idAcciones, string localidad, string claveLocalidad,
+            long idPrograma, string programa, string obra,
+            decimal invProg, decimal aportProg, decimal invEjer, decimal aportEjer,
+            decimal otrosProg, decimal otrosEjer, decimal totProg, decimal totEjer,
+            decimal saldoFism, decimal aportFism, decimal otrosSaldo, decimal totalSaldo,
+            string descripcion, string contrato, string dictamen,
+            DateTime perInicio, DateTime perFin,
+            DateTime fechaInicioProg, DateTime fechaFinalProg,
+            decimal contratoImporte, DateTime contratoFechaIni, DateTime contratoFechaFin,
+            decimal difeImporte, DateTime difeFechaIni, DateTime difeFechaFin,
+            decimal ampImporte, DateTime ampFechaIni, DateTime ampFechaFin,
+            string observaciones,
+            string oficioreg, string numobramun, string descripcionObrafism,
+            decimal avanceFisico, decimal avanceFinanciero,
+            string latInicio, string lonInicio, string latInterm, string lonInterm,
+            string latFinal, string lonFinal)
+        {
+            cmd.Parameters.AddWithValue("@idObra",            idObra);
+            cmd.Parameters.AddWithValue("@idAcciones",        idAcciones);
+            cmd.Parameters.AddWithValue("@localidad",         localidad);
+            cmd.Parameters.AddWithValue("@claveLocalidad",    claveLocalidad);
+            cmd.Parameters.AddWithValue("@idPrograma",        idPrograma);
+            cmd.Parameters.AddWithValue("@programa",          programa);
+            cmd.Parameters.AddWithValue("@obra",              obra);
+            cmd.Parameters.AddWithValue("@invProg",           invProg);
+            cmd.Parameters.AddWithValue("@aportProg",         aportProg);
+            cmd.Parameters.AddWithValue("@invEjer",           invEjer);
+            cmd.Parameters.AddWithValue("@aportEjer",         aportEjer);
+            cmd.Parameters.AddWithValue("@otrosProg",         otrosProg);
+            cmd.Parameters.AddWithValue("@otrosEjer",         otrosEjer);
+            cmd.Parameters.AddWithValue("@totProg",           totProg);
+            cmd.Parameters.AddWithValue("@totEjer",           totEjer);
+            cmd.Parameters.AddWithValue("@saldoFism",         saldoFism);
+            cmd.Parameters.AddWithValue("@aportFism",         aportFism);
+            cmd.Parameters.AddWithValue("@otrosSaldo",        otrosSaldo);
+            cmd.Parameters.AddWithValue("@totalSaldo",        totalSaldo);
+            cmd.Parameters.AddWithValue("@descripcion",       descripcion);
+            cmd.Parameters.AddWithValue("@contrato",          contrato);
+            cmd.Parameters.AddWithValue("@dictamen",          dictamen);
+            cmd.Parameters.AddWithValue("@perInicio",         perInicio);
+            cmd.Parameters.AddWithValue("@perFin",            perFin);
+            cmd.Parameters.AddWithValue("@fechaInicioProg",   fechaInicioProg);
+            cmd.Parameters.AddWithValue("@fechaFinalProg",    fechaFinalProg);
+            cmd.Parameters.AddWithValue("@contratoImporte",   contratoImporte);
+            cmd.Parameters.AddWithValue("@contratoFechaIni",  contratoFechaIni);
+            cmd.Parameters.AddWithValue("@contratoFechaFin",  contratoFechaFin);
+            cmd.Parameters.AddWithValue("@difeImporte",       difeImporte);
+            cmd.Parameters.AddWithValue("@difeFechaIni",      difeFechaIni);
+            cmd.Parameters.AddWithValue("@difeFechaFin",      difeFechaFin);
+            cmd.Parameters.AddWithValue("@ampImporte",        ampImporte);
+            cmd.Parameters.AddWithValue("@ampFechaIni",       ampFechaIni);
+            cmd.Parameters.AddWithValue("@ampFechaFin",       ampFechaFin);
+            cmd.Parameters.AddWithValue("@observaciones",     observaciones);
+            cmd.Parameters.AddWithValue("@oficioreg",         oficioreg);
+            cmd.Parameters.AddWithValue("@numobramun",        numobramun);
+            cmd.Parameters.AddWithValue("@descripcionObrafism", descripcionObrafism);
+            cmd.Parameters.AddWithValue("@avanceFisico",      avanceFisico);
+            cmd.Parameters.AddWithValue("@avanceFinanciero",  avanceFinanciero);
+            cmd.Parameters.AddWithValue("@latInicio",         latInicio);
+            cmd.Parameters.AddWithValue("@lonInicio",         lonInicio);
+            cmd.Parameters.AddWithValue("@latInterm",         latInterm);
+            cmd.Parameters.AddWithValue("@lonInterm",         lonInterm);
+            cmd.Parameters.AddWithValue("@latFinal",          latFinal);
+            cmd.Parameters.AddWithValue("@lonFinal",          lonFinal);
+        }
+
         // ── Helper: guarda foto en disco y actualiza columna imgfoto/foto ────────────
         private void GuardarFotoFism(SqlConnection conn, HttpRequest request,
             string fileKey, string imgColumn, string pathColumn,
@@ -2327,62 +2452,56 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
             var file = request.Files[fileKey];
             if (file == null || file.ContentLength == 0) return;
 
-            // Generar nombre único para evitar colisiones
-            string ext = Path.GetExtension(file.FileName);
+            string ext        = Path.GetExtension(file.FileName);
             string nombreArch = Path.GetFileNameWithoutExtension(file.FileName)
-                                  + "_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ext;
+                                + "_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ext;
             string rutaRelativa = ruta + nombreArch;
             string rutaCompleta = Path.Combine(rutaFisica, nombreArch);
 
-            // Eliminar archivo anterior si existe
             if (File.Exists(rutaCompleta))
                 File.Delete(rutaCompleta);
 
             file.SaveAs(rutaCompleta);
             byte[] bytes = File.ReadAllBytes(rutaCompleta);
 
-            // UPDATE igual que VS2005: guarda bytes en imgfoto y ruta en foto
             var cmd = new SqlCommand(
                 $"UPDATE tblp_fichatecnicafism SET {imgColumn} = @img, {pathColumn} = @ruta WHERE idfichatecnica = @id",
                 conn);
             cmd.Parameters.Add(new SqlParameter("@img", SqlDbType.VarBinary, -1) { Value = bytes });
             cmd.Parameters.AddWithValue("@ruta", rutaRelativa);
-            cmd.Parameters.AddWithValue("@id", idFichaTecnica);
+            cmd.Parameters.AddWithValue("@id",   idFichaTecnica);
             cmd.ExecuteNonQuery();
         }
 
-        // ── Eliminar foto FISM individual (foto1 o foto2) ───────────────────────────
+        // ── Eliminar foto georeferenciada FISM (inicio / intermedio / final) ─────────
         [HttpPost]
         [Route("EliminarFotoFism")]
         public IHttpActionResult EliminarFotoFism([FromBody] dynamic data)
         {
             try
             {
-                long idFicha = Convert.ToInt64(data.idFichaTecnica);
-                string columnaImg = (string)data.columnaImg;   // "imgfoto1" o "imgfoto2"
-                string columnaPath = (string)data.columnaPath;  // "foto1"    o "foto2"
+                long idFicha      = Convert.ToInt64(data.idFichaTecnica);
+                string columnaImg  = (string)data.columnaImg;   // "imgfotoinicio" | "imgfotointermedio" | "imgfotofinal"
+                string columnaPath = (string)data.columnaPath;  // "fotoinicio"    | "fotointermedio"    | "fotofinal"
 
-                // Validar que sólo se permitan las 2 columnas esperadas
-                if (columnaImg != "imgfoto1" && columnaImg != "imgfoto2")
+                var permitidos = new[] { "imgfotoinicio", "imgfotointermedio", "imgfotofinal" };
+                if (!Array.Exists(permitidos, p => p == columnaImg))
                     return BadRequest("Columna no permitida");
 
                 using (var conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
 
-                    // Obtener ruta actual
                     var cmdSel = new SqlCommand(
                         $"SELECT {columnaPath} FROM tblp_fichatecnicafism WHERE idfichatecnica = @id", conn);
                     cmdSel.Parameters.AddWithValue("@id", idFicha);
                     var rutaActual = cmdSel.ExecuteScalar()?.ToString() ?? "";
 
-                    // Limpiar columnas en BD
                     var cmdUpd = new SqlCommand(
                         $"UPDATE tblp_fichatecnicafism SET {columnaImg} = NULL, {columnaPath} = '' WHERE idfichatecnica = @id", conn);
                     cmdUpd.Parameters.AddWithValue("@id", idFicha);
                     cmdUpd.ExecuteNonQuery();
 
-                    // Eliminar archivo físico si existe
                     if (!string.IsNullOrEmpty(rutaActual))
                     {
                         var pathFisico = System.Web.Hosting.HostingEnvironment.MapPath("~/" + rutaActual);
@@ -3476,6 +3595,447 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                 return err;
             }
         }
+
+        // ════════════════════════════════════════════════════════════════════════
+        //  FICHA TÉCNICA DE OBRA F.I.S.M. — Reporte al vuelo
+        // ════════════════════════════════════════════════════════════════════════
+        [HttpGet]
+        [Route("GenerarFichaFism/{idAcciones}")]
+        [AllowAnonymous]
+        public HttpResponseMessage GenerarFichaFism(long idAcciones)
+        {
+            try
+            {
+                string baseUrl = HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Authority)
+                                 + HttpContext.Current.Request.ApplicationPath.TrimEnd('/') + "/";
+
+                // ── 1. Encabezado ─────────────────────────────────────────────
+                string nombreObra = "", numContrato = "", localidad = "",
+                       fuenteFinanciamiento = "", periodoInicio = "", periodoFin = "",
+                       rubro = "", programa = "", claveLocalidad = "", descripcionAccion = "";
+                decimal montoContratado = 0;
+
+                // ── 2. Datos ficha FISM ───────────────────────────────────────
+                string  oficioreg = "", numobramun = "", dictamen = "", observaciones = "";
+                string  descripcionObrafism = "";
+                decimal invProg = 0, invEjer = 0, aportProg = 0, aportEjer = 0;
+                decimal otrosProg = 0, otrosEjer = 0;
+                decimal saldoFism = 0, aportFism = 0, otrosSaldo = 0, totalSaldo = 0;
+                decimal totProg = 0, totEjer = 0;
+                decimal avanceFisico = 0, avanceFinanciero = 0;
+                string  fechaInicioProg = "", fechaFinalProg = "";
+                // Convenios
+                decimal contratoImp = 0, difeImp = 0, ampImp = 0;
+                string  contratoIni = "", contratoFin = "";
+                string  difeIni = "", difeFin = "";
+                string  ampIni = "", ampFin = "";
+                // Fotos georeferenciadas
+                string rutaInicio = "", latInicio = "", lonInicio = "";
+                string rutaIntermedio = "", latInterm = "", lonInterm = "";
+                string rutaFinal = "", latFinal = "", lonFinal = "";
+
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Encabezado
+                    var cmdEnc = new SqlCommand(@"
+                        SELECT P.OP_NombreObra, A.AC_Accion, C.CON_Contrato, C.CON_Montocontratado,
+                               A.LCL_Nombre, A.CveLocalidades, A.AC_Descripcionaccion,
+                               CONVERT(varchar,C.CON_Inicio,103) AS CON_Inicio,
+                               CONVERT(varchar,C.CON_Final,103)  AS CON_Final,
+                               R.Rub_Nombre, S.PRO_Nombre
+                        FROM TBLP_Obraproyecto P
+                        INNER JOIN TblD_Acciones A ON P.IDobraproyecto = A.IDobraproyecto
+                        INNER JOIN TBLD_Contrato C ON A.IDContrato = C.IDContrato
+                        INNER JOIN TBLC_Rubros R ON P.IDRubro = R.IDRubro
+                        INNER JOIN TBLC_Subrubro S ON R.IDRubro = S.IDRubro
+                        WHERE A.IDAcciones = @id", conn);
+                    cmdEnc.Parameters.AddWithValue("@id", idAcciones);
+                    using (var r = cmdEnc.ExecuteReader())
+                    {
+                        if (r.Read())
+                        {
+                            nombreObra      = r["OP_NombreObra"].ToString() + " (" + r["AC_Accion"].ToString() + ")";
+                            numContrato     = r["CON_Contrato"].ToString();
+                            localidad       = r["LCL_Nombre"].ToString();
+                            claveLocalidad  = r["CveLocalidades"].ToString();
+                            descripcionAccion = r["AC_Descripcionaccion"].ToString();
+                            montoContratado = r["CON_Montocontratado"] != DBNull.Value ? Convert.ToDecimal(r["CON_Montocontratado"]) : 0;
+                            periodoInicio   = r["CON_Inicio"].ToString();
+                            periodoFin      = r["CON_Final"].ToString();
+                            rubro           = r["Rub_Nombre"].ToString();
+                            programa        = r["PRO_Nombre"].ToString();
+                        }
+                    }
+
+                    // Fuente de financiamiento
+                    var cmdF = new SqlCommand(@"
+                        SELECT TOP 1 F.PRF_Nombre FROM TBLD_Financiamientoinversion I
+                        INNER JOIN TblC_FuenteFinanciamiento F ON I.IDProgramafinanciamiento = F.IDFuenteFinanciamiento
+                        WHERE I.IDAcciones = @id", conn);
+                    cmdF.Parameters.AddWithValue("@id", idAcciones);
+                    var fRes = cmdF.ExecuteScalar();
+                    if (fRes != null) fuenteFinanciamiento = fRes.ToString();
+
+                    // Datos ficha FISM
+                    var cmdFism = new SqlCommand("SELECT * FROM tblp_fichatecnicafism WHERE IDAcciones = @id", conn);
+                    cmdFism.Parameters.AddWithValue("@id", idAcciones);
+                    using (var rf = cmdFism.ExecuteReader())
+                    {
+                        if (rf.Read())
+                        {
+                            Func<string, decimal> D = col => rf[col] != DBNull.Value ? Convert.ToDecimal(rf[col]) : 0;
+                            Func<string, string>  S = col => rf[col] != DBNull.Value ? rf[col].ToString() : "";
+                            Func<string, string>  Dt= col => rf[col] != DBNull.Value ? Convert.ToDateTime(rf[col]).ToString("dd/MM/yyyy") : "";
+
+                            oficioreg    = S("oficioreg");   numobramun = S("numobramun");
+                            dictamen     = S("dictamen");    observaciones = S("observaciones");
+                            descripcionObrafism = S("descripcionobrafism");
+
+                            invProg    = D("inversionprogramadafism");  invEjer   = D("inversionejercidafism");
+                            aportProg  = D("aportacionprogramadafism"); aportEjer = D("aportacionejercidafism");
+                            otrosProg  = D("otrosprogramado");          otrosEjer = D("otrosejercida");
+                            totProg    = D("totalprogramado");          totEjer   = D("totalejercida");
+                            saldoFism  = D("saldofism");    aportFism  = D("aportacionfism");
+                            otrosSaldo = D("otrossaldofism"); totalSaldo= D("totalsaldo");
+
+                            avanceFisico     = D("avancefisicofism");
+                            avanceFinanciero = D("avancefinancierofism");
+
+                            fechaInicioProg = Dt("programadofechainicial");
+                            fechaFinalProg  = Dt("programadofechafinal");
+
+                            contratoImp = D("conveniocontratoimporte");
+                            contratoIni = Dt("conveniocontratofechainicio");
+                            contratoFin = Dt("conveniocontratofechafin");
+                            difeImp     = D("conveniodiferidoimporte");
+                            difeIni     = Dt("conveniodiferidofechainicio");
+                            difeFin     = Dt("conveniodiferidofechafin");
+                            ampImp      = D("ampliacionplazoimporte");
+                            ampIni      = Dt("ampliacionplazofechainicio");
+                            ampFin      = Dt("ampliacionplazofechafin");
+
+                            rutaInicio    = S("fotoinicio");    latInicio = S("latitudinicio");   lonInicio = S("longitudinicio");
+                            rutaIntermedio= S("fotointermedio");latInterm = S("latitudintermedio");lonInterm= S("longitudintermedio");
+                            rutaFinal     = S("fotofinal");     latFinal  = S("latitudfinal");    lonFinal  = S("longitudfinal");
+                        }
+                    }
+                }
+
+                // ── 3. Helpers ────────────────────────────────────────────────
+                var mx = new CultureInfo("es-MX");
+                Func<decimal, string> Fmt = v => v.ToString("C", mx);
+                Func<decimal, string> FmtN= v => v == 0 ? "—" : v.ToString("C", mx);
+                Func<decimal, string> FmtPct = v => v.ToString("0.##") + " %";
+
+                Func<string, string> toUrl = ruta =>
+                {
+                    if (string.IsNullOrEmpty(ruta)) return "";
+                    if (ruta.StartsWith("http")) return ruta;
+                    return baseUrl + ruta.Replace("\\", "/").TrimStart('/');
+                };
+
+                Func<string, string, string, string, string> fotoCard = (titulo, ruta, lat, lon) =>
+                {
+                    if (string.IsNullOrEmpty(ruta)) return "";
+                    string phys = HttpContext.Current.Server.MapPath("~/" + ruta.TrimStart('/').Replace("/", "\\"));
+                    if (!System.IO.File.Exists(phys)) return "";
+                    string url   = toUrl(ruta);
+                    string coords = (!string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
+                        ? $"<div class='foto-coords'><b>Lat:</b> {lat}&nbsp;&nbsp;<b>Lon:</b> {lon}</div>" : "";
+                    return $@"<div class='foto-bloque'>
+                      <div class='foto-etiqueta'>{titulo}</div>
+                      <img class='foto' src='{url}' alt='{titulo}'>
+                      <div class='foto-caption'>{coords}</div>
+                    </div>";
+                };
+
+                // Fila tabla financiera (estilo clásico)
+                Func<string, decimal, decimal, decimal, string> filaFin = (label, prog, ejer, saldo) =>
+                    $"<tr><td class='f-lbl'>{label}</td>" +
+                    $"<td class='f-num'>{Fmt(prog)}</td>" +
+                    $"<td class='f-lbl'>{label}</td>" +
+                    $"<td class='f-num'>{Fmt(ejer)}</td>" +
+                    $"<td class='f-lbl'>{label}</td>" +
+                    $"<td class='f-num'>{Fmt(saldo)}</td></tr>";
+
+                // Fila de convenio modificatorio (una fila por convenio)
+                Func<string, decimal, string, string, string> filaConv = (tipo, imp, ini, fin) =>
+                    imp == 0 ? "" :
+                    $"<tr><td>{tipo}</td><td class='f-num'>{Fmt(imp)}</td><td>{ini}</td><td>{fin}</td></tr>";
+
+                // Fotos lado a lado
+                var listaFotos = new System.Collections.Generic.List<string>();
+                string fc1 = fotoCard("Fotografía de Inicio",  rutaInicio,     latInicio, lonInicio);
+                string fc2 = fotoCard("Fotografía Intermedia", rutaIntermedio, latInterm,  lonInterm);
+                string fc3 = fotoCard("Fotografía Final",      rutaFinal,      latFinal,   lonFinal);
+                if (!string.IsNullOrEmpty(fc1)) listaFotos.Add(fc1);
+                if (!string.IsNullOrEmpty(fc2)) listaFotos.Add(fc2);
+                if (!string.IsNullOrEmpty(fc3)) listaFotos.Add(fc3);
+                string fotosHtml = listaFotos.Count == 0 ? "" :
+                    "<div class='fotos-row'>" + string.Join("", listaFotos) + "</div>";
+
+                bool hayConvenios = contratoImp > 0 || difeImp > 0 || ampImp > 0;
+
+                // ── 4. HTML (estilo ficha clásica) ───────────────────────────
+                string html = $@"<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Ficha Técnica de Obra F.I.S.M.</title>
+<style>
+  * {{ box-sizing:border-box; margin:0; padding:0; }}
+  html,body {{ font-family:Arial,sans-serif; font-size:10px; color:#000; background:#fff; }}
+
+  /* ══ Encabezado ══ */
+  .hdr-wrap {{ border-bottom:2px solid #000; padding-bottom:2px; margin-bottom:4px; }}
+  .hdr-inner {{ display:flex; align-items:center; justify-content:space-between; padding:2px 8px; }}
+  .hdr-logo img {{ height:52px; width:auto; }}
+  .hdr-center {{ text-align:center; flex:1; padding:0 8px; }}
+  .hdr-center .h-titulo {{ font-size:12px; font-weight:bold; text-transform:uppercase; line-height:1.3; }}
+  .hdr-center .h-ea    {{ font-size:9px; }}
+
+  /* ══ Cuerpo ══ */
+  .page {{ max-width:820px; margin:0 auto; padding:0 10px 10px; }}
+
+  /* Tabla general */
+  table.t {{ width:100%; border-collapse:collapse; margin-bottom:0; font-size:10px; }}
+  table.t td, table.t th {{ border:1px solid #000; padding:2px 5px; vertical-align:top; }}
+  table.t td.lbl {{ font-weight:bold; background:#f2f2f2; white-space:nowrap; width:13%; }}
+  table.t th {{ background:#e0e0e0; font-weight:bold; text-align:center; }}
+
+  /* Encabezado de sección */
+  .sec-title {{ background:#333; color:#fff; font-weight:bold; font-size:10px;
+    text-align:center; padding:2px 5px; border:1px solid #000; border-bottom:0;
+    text-transform:uppercase; letter-spacing:.4px; margin-top:5px; }}
+
+  /* Tabla financiera 6-col */
+  table.fin {{ width:100%; border-collapse:collapse; font-size:10px; margin-bottom:0; }}
+  table.fin td, table.fin th {{ border:1px solid #000; padding:2px 5px; }}
+  table.fin th {{ background:#d9d9d9; font-weight:bold; text-align:center; font-size:9px; }}
+  table.fin td.f-lbl {{ font-weight:bold; background:#f2f2f2; text-align:center;
+    width:11%; font-size:9px; }}
+  table.fin td.f-num {{ text-align:right; }}
+  table.fin tr.tot td {{ font-weight:bold; background:#e8e8e8; }}
+
+  /* Tabla de dos paneles */
+  table.two {{ width:100%; border-collapse:collapse; font-size:10px; }}
+  table.two td {{ border:1px solid #000; padding:2px 5px; vertical-align:top; }}
+  table.two td.lbl {{ font-weight:bold; background:#f2f2f2; white-space:nowrap; }}
+  table.two td.num {{ text-align:right; }}
+
+  /* Convenios */
+  table.conv {{ width:100%; border-collapse:collapse; font-size:10px; }}
+  table.conv th {{ background:#d9d9d9; font-weight:bold; border:1px solid #000;
+    padding:2px 5px; text-align:center; }}
+  table.conv td {{ border:1px solid #000; padding:2px 5px; }}
+  table.conv td.num {{ text-align:right; }}
+
+  /* Fotos — 1 por fila, centradas */
+  .fotos-row {{ display:block; margin-top:4px; }}
+  .foto-bloque {{ text-align:center; width:80%; margin:0 auto 8px auto; page-break-inside:avoid; }}
+  .foto-etiqueta {{ font-weight:bold; font-size:10px; background:#333; color:#fff;
+    padding:2px 8px; display:block; border:1px solid #000; border-bottom:0; }}
+  img.foto {{ width:100%; max-height:210px; object-fit:contain;
+    border:1px solid #000; display:block; }}
+  .foto-caption {{ font-size:9px; border:1px solid #000; border-top:0;
+    padding:2px 5px; background:#f9f9f9; text-align:left; }}
+
+  /* Firmas */
+  .firmas {{ display:flex; justify-content:space-around; margin-top:20px; }}
+  .firma-item {{ text-align:center; width:40%; }}
+  .firma-linea {{ border-top:1px solid #000; padding-top:3px; font-size:9px; }}
+  .firma-cargo {{ font-size:9px; font-weight:bold; text-transform:uppercase; }}
+
+  /* Botón imprimir */
+  .no-print {{ text-align:right; padding:6px 10px 2px; }}
+  .no-print button {{ background:#333; color:#fff; border:none;
+    padding:4px 14px; cursor:pointer; font-size:11px; }}
+
+  /* ══ PRINT ══ */
+  @media print {{
+    .no-print {{ display:none !important; }}
+    @page {{ margin:8mm 8mm; size:letter; }}
+    html,body {{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
+    .foto-bloque {{ page-break-inside:avoid; }}
+  }}
+</style>
+</head>
+<body>
+
+<div class='no-print'>
+  <button onclick='window.print()'>&#128424; Imprimir / PDF</button>
+</div>
+
+<!-- ═══ ENCABEZADO ═══ -->
+<div class='page'>
+<div class='hdr-wrap'>
+  <div class='hdr-inner'>
+    <div class='hdr-logo'>
+      <img src='{baseUrl}assets/media/logo_chilon.png' alt='Logo'
+           onerror=""this.style.visibility='hidden'"">
+    </div>
+    <div class='hdr-center'>
+      <div class='h-titulo'>FICHA TECNICA DE OBRA ( F.I.S.M. )</div>
+      <div class='h-ea'>EA.- FISMDF AÑO EN CURSO</div>
+    </div>
+    <div class='hdr-logo'>
+      <img src='{baseUrl}assets/media/escudo.png' alt='Escudo'
+           onerror=""this.style.visibility='hidden'"">
+    </div>
+  </div>
+</div>
+
+
+<!-- DATOS GENERALES -->
+<table class='t'>
+  <tr>
+    <td class='lbl'>MUNICIPIO</td>
+    <td style='width:35%'>{claveLocalidad} &nbsp;</td>
+    <td class='lbl' style='width:14%'>PROGRAMA</td>
+    <td>{programa}</td>
+  </tr>
+  <tr>
+    <td class='lbl'>LOCALIDAD</td>
+    <td>{localidad}</td>
+    <td class='lbl'>FUENTE FINANC.</td>
+    <td>{fuenteFinanciamiento}</td>
+  </tr>
+  <tr>
+    <td class='lbl'>RUBRO</td>
+    <td colspan='3'>{rubro}</td>
+  </tr>
+  <tr>
+    <td class='lbl'>OBRA</td>
+    <td colspan='3'>{descripcionAccion}</td>
+  </tr>
+  {(!string.IsNullOrEmpty(oficioreg) || !string.IsNullOrEmpty(numobramun) ?
+    $"<tr><td class='lbl'>OFICIO REG.</td><td>{oficioreg}</td>" +
+    $"<td class='lbl'>NÚM. OBRA MUN.</td><td>{numobramun}</td></tr>" : "")}
+</table>
+
+<!-- SITUACIÓN FINANCIERA -->
+<div class='sec-title'>SITUACIÓN FINANCIERA</div>
+<table class='fin'>
+  <thead>
+    <tr>
+      <th colspan='2'>INVERSIÓN PROGRAMADA</th>
+      <th colspan='2'>INVERSIÓN EJERCIDA</th>
+      <th colspan='2'>SALDO</th>
+    </tr>
+  </thead>
+  <tbody>
+    {filaFin("FISM",       invProg,   invEjer,   saldoFism)}
+    {filaFin("APORTACIÓN", aportProg, aportEjer, aportFism)}
+    {filaFin("OTROS",      otrosProg, otrosEjer, otrosSaldo)}
+    <tr class='tot'>
+      <td class='f-lbl'>TOTAL</td><td class='f-num'>{Fmt(totProg)}</td>
+      <td class='f-lbl'>TOTAL</td><td class='f-num'>{Fmt(totEjer)}</td>
+      <td class='f-lbl'>TOTAL</td><td class='f-num'>{Fmt(totalSaldo)}</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- DESCRIPCIÓN + CONTRATO + AVANCES + FECHAS (tabla unificada) -->
+<table class='two' style='margin-top:4px'>
+  <colgroup>
+    <col style='width:50%'>
+    <col style='width:25%'>
+    <col style='width:25%'>
+  </colgroup>
+  <tr>
+    <td class='lbl' style='border-bottom:0'>Descripción de la Obra</td>
+    <td class='lbl'>Número de Contrato</td>
+    <td style='font-weight:bold'>{numContrato}</td>
+  </tr>
+  <tr>
+    <td rowspan='5' style='vertical-align:top;border-top:0;line-height:1.4;padding-top:2px'>{descripcionObrafism}</td>
+    <td class='lbl'>Número de Dictamen</td>
+    <td style='font-weight:bold'>{dictamen}</td>
+  </tr>
+  <tr>
+    <td class='lbl' colspan='2' style='background:#ddd;font-weight:bold;text-align:center'>Avances</td>
+  </tr>
+  <tr>
+    <td class='lbl'>Físico</td>
+    <td class='num' style='font-weight:bold'>{avanceFisico:0.00} %</td>
+  </tr>
+  <tr>
+    <td class='lbl'>Financiero</td>
+    <td class='num' style='font-weight:bold'>{avanceFinanciero:0.00} %</td>
+  </tr>
+  <tr>
+    <td class='lbl' colspan='2' style='background:#ddd;font-weight:bold;text-align:center'>Programado Real</td>
+  </tr>
+  <tr>
+    <td style='border-top:0'>&nbsp;</td>
+    <td class='lbl'>Inicio / Final</td>
+    <td style='font-weight:bold'>{fechaInicioProg} / {fechaFinalProg}</td>
+  </tr>
+</table>
+
+<!-- CONVENIOS MODIFICATORIOS -->
+<table class='two' style='margin-top:4px'>
+  <tr>
+    <td style='width:50%;vertical-align:top;padding:0;border:0'>
+      <div class='sec-title' style='margin-top:0'>Convenios Modificatorios</div>
+      {(hayConvenios ?
+        $@"<table class='conv' style='border-top:0'>
+          <thead><tr><th>Tipo</th><th>Importe</th><th>Inicio</th><th>Término</th></tr></thead>
+          <tbody>
+            {(contratoImp>0?$"<tr><td>Contrato</td><td class='num'>{Fmt(contratoImp)}</td><td>{contratoIni}</td><td>{contratoFin}</td></tr>":"")}
+            {(difeImp>0?$"<tr><td>Diferido</td><td class='num'>{Fmt(difeImp)}</td><td>{difeIni}</td><td>{difeFin}</td></tr>":"")}
+            {(ampImp>0?$"<tr><td>Ampliación de Plazo</td><td class='num'>{Fmt(ampImp)}</td><td>{ampIni}</td><td>{ampFin}</td></tr>":"")}
+          </tbody>
+        </table>" :
+        "<div style='padding:6px;font-size:10px;color:#666;border:1px solid #000;border-top:0'>Sin convenios modificatorios registrados.</div>"
+      )}
+    </td>
+    <td style='width:50%;vertical-align:top;padding:0;border:0'>
+      <div class='sec-title' style='margin-top:0'>Observaciones</div>
+      <div style='border:1px solid #000;border-top:0;padding:6px;min-height:60px;font-size:11px'>{observaciones}</div>
+    </td>
+  </tr>
+</table>
+
+<!-- FOTOGRAFÍAS -->
+{(listaFotos.Count > 0 ? $@"
+<div class='sec-title' style='margin-top:4px'>FOTOGRAFÍA TERMINADA</div>
+{fotosHtml}" : "")}
+
+<!-- FIRMAS -->
+<div class='firmas'>
+  <div class='firma-item'>
+    <div style='height:36px'></div>
+    <div class='firma-linea'>&nbsp;</div>
+    <div class='firma-cargo'>Supervisor de Obra</div>
+  </div>
+  <div class='firma-item'>
+    <div style='height:36px'></div>
+    <div class='firma-linea'>&nbsp;</div>
+    <div class='firma-cargo'>Director de Obras Públicas Municipales</div>
+  </div>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>";
+
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(html, System.Text.Encoding.UTF8, "text/html")
+                };
+            }
+            catch (Exception ex)
+            {
+                return new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("Error GenerarFichaFism: " + ex.Message)
+                };
+            }
+        }
         #endregion
     }
 
@@ -3998,6 +4558,373 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222;
         }
 
         private System.Net.Http.HttpResponseMessage MsgError(string msg)
+        {
+            var html = $"<!DOCTYPE html><html><body style='font-family:Arial;padding:40px;color:#c00'><h3>Error</h3><p>{System.Web.HttpUtility.HtmlEncode(msg)}</p></body></html>";
+            var r = Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+            r.Content = new System.Net.Http.StringContent(html, Encoding.UTF8, "text/html");
+            return r;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  REPORTE FINAL — igual que seguimiento pero con encabezado "Final"
+    // ══════════════════════════════════════════════════════════════════════
+    [System.Web.Http.RoutePrefix("api/Cedula")]
+    public class ReporteFinalController : System.Web.Http.ApiController
+    {
+        private string _cs = System.Configuration.ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+
+        [System.Web.Http.HttpGet]
+        [System.Web.Http.Route("ReporteFinal/{idSeguimiento}")]
+        public System.Net.Http.HttpResponseMessage ReporteFinal(long idSeguimiento)
+        {
+            try
+            {
+                dynamic seg    = null;
+                dynamic accion = null;
+                dynamic contrato = null;
+
+                using (var conn = new System.Data.SqlClient.SqlConnection(_cs))
+                {
+                    conn.Open();
+
+                    var cmdSeg = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT TOP 1 idseguimiento, IDAcciones, IDobraproyecto,
+                               descripcionobra, tipo_seguimiento,
+                               latitud, longuitud, direccion, referencia
+                        FROM TBLP_cedulaseguimiento
+                        WHERE idseguimiento = @id", conn);
+                    cmdSeg.Parameters.AddWithValue("@id", idSeguimiento);
+                    using (var r = cmdSeg.ExecuteReader())
+                    {
+                        if (r.Read())
+                            seg = new {
+                                idSeguimiento  = r["idseguimiento"],
+                                idAcciones     = r["IDAcciones"],
+                                idObraproyecto = r["IDobraproyecto"],
+                                descripcionObra= r["descripcionobra"] != DBNull.Value ? r["descripcionobra"].ToString() : "",
+                                tipoSeg        = r["tipo_seguimiento"].ToString(),
+                                latitud        = r["latitud"]   != DBNull.Value ? r["latitud"].ToString()   : "",
+                                longitud       = r["longuitud"] != DBNull.Value ? r["longuitud"].ToString() : "",
+                                direccion      = r["direccion"] != DBNull.Value ? r["direccion"].ToString() : "",
+                                referencia     = r["referencia"]!= DBNull.Value ? r["referencia"].ToString(): ""
+                            };
+                    }
+                    if (seg == null)
+                        return MsgErrorF("Registro final no encontrado: " + idSeguimiento);
+
+                    // Tomar lat/lon/dirección siempre del tipo='I'
+                    long idAcc  = Convert.ToInt64(seg.idAcciones);
+                    var cmdIni = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT TOP 1 latitud, longuitud, direccion, referencia
+                        FROM TBLP_cedulaseguimiento
+                        WHERE IDAcciones = @ia AND tipo_seguimiento = 'I'", conn);
+                    cmdIni.Parameters.AddWithValue("@ia", idAcc);
+                    using (var ri = cmdIni.ExecuteReader())
+                    {
+                        if (ri.Read())
+                            seg = new {
+                                idSeguimiento  = seg.idSeguimiento,
+                                idAcciones     = seg.idAcciones,
+                                idObraproyecto = seg.idObraproyecto,
+                                descripcionObra= seg.descripcionObra,
+                                tipoSeg        = seg.tipoSeg,
+                                latitud        = ri["latitud"]   != DBNull.Value ? ri["latitud"].ToString()   : "",
+                                longitud       = ri["longuitud"] != DBNull.Value ? ri["longuitud"].ToString() : "",
+                                direccion      = ri["direccion"] != DBNull.Value ? ri["direccion"].ToString() : "",
+                                referencia     = ri["referencia"]!= DBNull.Value ? ri["referencia"].ToString(): ""
+                            };
+                    }
+
+                    long idObra = Convert.ToInt64(seg.idObraproyecto);
+
+                    var cmdAcc = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT A.IDAcciones, A.AC_Accion, A.AC_Descripcionaccion,
+                               A.Latitud, A.Logintud,
+                               A.MNP_Nombre, A.LCL_Nombre, A.descripcionlocalidad,
+                               A.IDContrato,
+                               P.OP_NombreObra
+                        FROM TblD_Acciones A
+                        INNER JOIN TBLP_Obraproyecto P ON A.IDobraproyecto = P.IDobraproyecto
+                        WHERE A.IDAcciones = @id", conn);
+                    cmdAcc.Parameters.AddWithValue("@id", idAcc);
+                    using (var r = cmdAcc.ExecuteReader())
+                    {
+                        if (r.Read())
+                            accion = new {
+                                accion        = r["AC_Accion"] != DBNull.Value ? r["AC_Accion"].ToString() : "",
+                                descripcion   = r["AC_Descripcionaccion"] != DBNull.Value ? r["AC_Descripcionaccion"].ToString() : "",
+                                latitud       = r["Latitud"] != DBNull.Value ? r["Latitud"].ToString() : "",
+                                longitud      = r["Logintud"] != DBNull.Value ? r["Logintud"].ToString() : "",
+                                municipio     = r["MNP_Nombre"] != DBNull.Value ? r["MNP_Nombre"].ToString() : "",
+                                localidad     = r["LCL_Nombre"] != DBNull.Value ? r["LCL_Nombre"].ToString() : "",
+                                descLocalidad = r["descripcionlocalidad"] != DBNull.Value ? r["descripcionlocalidad"].ToString() : "",
+                                idContrato    = r["IDContrato"] != DBNull.Value ? r["IDContrato"].ToString() : "0",
+                                nombreObra    = r["OP_NombreObra"] != DBNull.Value ? r["OP_NombreObra"].ToString() : ""
+                            };
+                    }
+                    if (accion == null)
+                        return MsgErrorF("No se encontró la acción.");
+
+                    if (!string.IsNullOrEmpty(accion.idContrato) && accion.idContrato != "0")
+                    {
+                        var cmdCon = new System.Data.SqlClient.SqlCommand(@"
+                            SELECT CON_Contrato,
+                                   CONVERT(varchar,CON_Inicio,103) as CON_Inicio,
+                                   CONVERT(varchar,CON_Final,103)  as CON_Final,
+                                   CON_Montocontratado
+                            FROM TBLD_Contrato WHERE IDContrato = @id", conn);
+                        cmdCon.Parameters.AddWithValue("@id", Convert.ToInt64(accion.idContrato));
+                        using (var r = cmdCon.ExecuteReader())
+                        {
+                            if (r.Read())
+                                contrato = new {
+                                    folio  = r["CON_Contrato"] != DBNull.Value ? r["CON_Contrato"].ToString() : "",
+                                    inicio = r["CON_Inicio"]   != DBNull.Value ? r["CON_Inicio"].ToString()   : "",
+                                    fin    = r["CON_Final"]    != DBNull.Value ? r["CON_Final"].ToString()    : "",
+                                    monto  = r["CON_Montocontratado"] != DBNull.Value
+                                             ? Convert.ToDecimal(r["CON_Montocontratado"]) : 0m
+                                };
+                        }
+                    }
+                    if (contrato == null)
+                        contrato = new { folio = "", inicio = "", fin = "", monto = 0m };
+
+                    // Partidas del inicio
+                    long idSegInicio = idSeguimiento;
+                    var cmdSI = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT TOP 1 idseguimiento FROM TBLP_cedulaseguimiento
+                        WHERE IDAcciones=@ia AND tipo_seguimiento='I'", conn);
+                    cmdSI.Parameters.AddWithValue("@ia", idAcc);
+                    var siObj = cmdSI.ExecuteScalar();
+                    if (siObj != null) idSegInicio = Convert.ToInt64(siObj);
+
+                    var partidas = new System.Collections.Generic.List<dynamic>();
+                    var cmdPart = new System.Data.SqlClient.SqlCommand(@"
+                        SELECT p.idpartida, p.orden, p.descripcion
+                        FROM TBLP_cedula_partidas p
+                        WHERE p.idseguimiento = @isi
+                        ORDER BY p.orden", conn);
+                    cmdPart.Parameters.AddWithValue("@isi", idSegInicio);
+                    using (var r = cmdPart.ExecuteReader())
+                    {
+                        while (r.Read())
+                            partidas.Add(new {
+                                idPartida   = Convert.ToInt64(r["idpartida"]),
+                                orden       = r["orden"] != DBNull.Value ? Convert.ToInt32(r["orden"]) : 0,
+                                descripcion = r["descripcion"] != DBNull.Value ? r["descripcion"].ToString() : ""
+                            });
+                    }
+
+                    // Fotos del registro FINAL (idSeguimiento = tipo F)
+                    var fotos = new System.Collections.Generic.Dictionary<long,
+                                    System.Collections.Generic.List<dynamic>>();
+                    if (partidas.Count > 0)
+                    {
+                        var ids = string.Join(",", partidas.Select(p => p.idPartida.ToString()));
+                        var cmdFoto = new System.Data.SqlClient.SqlCommand(@"
+                            SELECT idpartida, numero_foto, ruta_foto, descripcion, latitud, longitud
+                            FROM TBLP_cedula_partidas_fotos
+                            WHERE idseguimiento = @is AND idpartida IN (" + ids + @")
+                            ORDER BY idpartida, numero_foto", conn);
+                        cmdFoto.Parameters.AddWithValue("@is", idSeguimiento);
+                        using (var r = cmdFoto.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                long pid = Convert.ToInt64(r["idpartida"]);
+                                if (!fotos.ContainsKey(pid))
+                                    fotos[pid] = new System.Collections.Generic.List<dynamic>();
+                                fotos[pid].Add(new {
+                                    numFoto     = Convert.ToInt32(r["numero_foto"]),
+                                    ruta        = r["ruta_foto"] != DBNull.Value ? r["ruta_foto"].ToString() : "",
+                                    descripcion = r["descripcion"] != DBNull.Value ? r["descripcion"].ToString() : "",
+                                    latitud     = r["latitud"] != DBNull.Value ? r["latitud"].ToString() : "",
+                                    longitud    = r["longitud"] != DBNull.Value ? r["longitud"].ToString() : ""
+                                });
+                            }
+                        }
+                    }
+
+                    // ── Construir HTML ────────────────────────────────────────────
+                    string monto     = ((decimal)contrato.monto).ToString("C2", new System.Globalization.CultureInfo("es-MX"));
+                    string fechaGen  = DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-MX"));
+                    string nombreObra = (accion.nombreObra + " " + accion.accion).Trim();
+                    Func<string,string> toUrl = (ruta) => {
+                        var u = (ruta ?? "").Trim();
+                        if (u.StartsWith("~/")) u = u.Substring(2);
+                        if (u.Length > 0 && u[0] != '/') u = "/" + u;
+                        return u;
+                    };
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine("<!DOCTYPE html><html lang='es'><head>");
+                    sb.AppendLine("<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>");
+                    sb.AppendLine("<title>Reporte Final</title>");
+                    sb.AppendLine(@"<style>
+:root { --c-primary:#1a6b3a; --c-primary2:#145530; --c-accent:#e8a020; --c-light:#eef6f1; --c-border:#c3dccb; --c-text:#0f2d1a; --c-muted:#5a7a65; }
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; font-size:13px; color:#222; background:#f0f4f2; }
+@media print {
+    @page { margin:10mm 12mm; size:letter; }
+    html { -webkit-print-color-adjust:exact; }
+    body { background:#fff !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
+    .no-print { display:none !important; }
+    .badge-tipo { display:none !important; }
+    .page { box-shadow:none !important; margin:0 !important; border-radius:0 !important; max-width:100% !important; }
+    .partida-card { page-break-inside:avoid !important; break-inside:avoid !important; }
+    .header,.header-strip,.obra-nombre,.info-title,.partida-header,.partida-num,.seccion-foto-titulo,.footer
+        { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+}
+.page { max-width:900px; margin:20px auto; background:#fff; border-radius:8px; box-shadow:0 2px 16px rgba(0,0,0,.12); overflow:hidden; }
+.header { background:linear-gradient(135deg,var(--c-primary2) 0%,var(--c-primary) 60%,var(--c-primary2) 100%); color:#fff; padding:0; }
+.header-inner { display:flex; align-items:center; padding:18px 28px; gap:20px; }
+.header-logos { display:flex; gap:12px; align-items:center; }
+.header-logos img { height:72px; width:auto; object-fit:contain; filter:drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
+.header-text { flex:1; text-align:center; }
+.header-text .ayuntamiento { font-size:15px; font-weight:700; letter-spacing:.5px; line-height:1.3; text-transform:uppercase; }
+.header-text .periodo { font-size:12px; margin-top:4px; opacity:.88; }
+.header-strip { background:var(--c-accent); color:#fff; text-align:center; font-size:12px; font-weight:700; letter-spacing:1px; padding:6px 20px; text-transform:uppercase; }
+.body { padding:12px 24px; }
+.badge-tipo { display:inline-block; background:var(--c-primary); color:#fff; font-size:11px; font-weight:700; letter-spacing:1px; padding:2px 10px; border-radius:20px; margin-bottom:10px; text-transform:uppercase; }
+.info-card { background:var(--c-light); border:1px solid var(--c-border); border-radius:6px; padding:10px 14px; margin-bottom:10px; }
+.info-title { font-size:10px; font-weight:700; color:var(--c-primary); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; border-bottom:2px solid var(--c-primary); padding-bottom:3px; }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; }
+.info-grid.cols3 { grid-template-columns:1fr 1fr 1fr; }
+.info-item label { display:block; font-size:10px; color:var(--c-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:1px; }
+.info-item .val { font-size:12px; font-weight:500; color:var(--c-text); }
+.info-item.span2 { grid-column:span 2; }
+.info-item.span3 { grid-column:span 3; }
+.obra-nombre { background:var(--c-primary); color:#fff; border-radius:6px; padding:10px 16px; margin-bottom:10px; }
+.obra-nombre label { font-size:10px; font-weight:700; letter-spacing:.8px; opacity:.8; text-transform:uppercase; }
+.obra-nombre .val { font-size:13px; font-weight:700; margin-top:3px; }
+.seccion-foto-titulo { background:var(--c-primary2); color:#fff; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:6px 14px; border-radius:6px; margin:10px 0 8px; }
+.partida-card { border:1px solid var(--c-border); border-radius:6px; margin-bottom:10px; overflow:hidden; page-break-inside:avoid; break-inside:avoid; }
+.partida-header { background:var(--c-light); border-bottom:1px solid var(--c-border); padding:7px 12px; display:flex; align-items:center; gap:8px; }
+.partida-num { background:var(--c-primary); color:#fff; font-size:10px; font-weight:700; white-space:nowrap; padding:3px 9px; border-radius:10px; flex-shrink:0; }
+.partida-desc { font-size:12px; font-weight:600; color:var(--c-text); }
+.fotos-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+.foto-slot { padding:8px 12px; border-right:1px solid var(--c-border); }
+.foto-slot:last-child { border-right:none; }
+.foto-slot img { width:100%; height:170px; object-fit:cover; border-radius:4px; border:1px solid var(--c-border); display:block; }
+.foto-placeholder { width:100%; height:170px; border-radius:4px; border:2px dashed var(--c-border); background:var(--c-light); display:flex; align-items:center; justify-content:center; color:#aab0c0; font-size:11px; }
+.foto-label { font-size:10px; font-weight:600; color:var(--c-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+.foto-desc { font-size:11px; color:#444; margin-top:4px; }
+.foto-coords { font-size:10px; color:var(--c-muted); margin-top:2px; }
+.footer { background:var(--c-light); border-top:2px solid var(--c-border); text-align:center; padding:12px 20px; font-size:11px; color:var(--c-muted); }
+.print-btn { display:block; margin:18px auto 0; width:fit-content; background:var(--c-primary); color:#fff; border:none; padding:10px 30px; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; letter-spacing:.5px; }
+.print-btn:hover { background:var(--c-primary2); }
+</style>");
+                    sb.AppendLine("</head><body><div class='page'>");
+
+                    // Encabezado — solo cambia el texto del strip
+                    sb.AppendLine("<div class='header'><div class='header-inner'>");
+                    sb.AppendLine("<div class='header-logos'>");
+                    sb.AppendLine("  <img src='/assets/media/escudo.png' alt='Escudo' onerror=\"this.style.display='none'\">");
+                    sb.AppendLine("  <img src='/assets/media/logo_chilon.png' alt='Logo' onerror=\"this.style.display='none'\">");
+                    sb.AppendLine("</div>");
+                    sb.AppendLine("<div class='header-text'>");
+                    sb.AppendLine("  <div class='ayuntamiento'>H. Ayuntamiento Municipal de Chil&oacute;n, Chiapas</div>");
+                    sb.AppendLine("  <div class='periodo'>2024 &ndash; 2027</div>");
+                    sb.AppendLine("</div></div>"); // header-inner
+                    sb.AppendLine("<div class='header-strip'>C&eacute;dula de Verificaci&oacute;n Final &mdash; Reporte Fotogr&aacute;fico</div>");
+                    sb.AppendLine("</div>"); // header
+
+                    sb.AppendLine("<div class='body'>");
+                    sb.AppendLine("<div class='badge-tipo'>Tipo de Visita: FINAL</div>");
+
+                    sb.AppendLine("<div class='obra-nombre'>");
+                    sb.AppendLine("  <label>Nombre de la Obra</label>");
+                    sb.AppendLine($"  <div class='val'>{System.Web.HttpUtility.HtmlEncode(nombreObra)}</div>");
+                    sb.AppendLine("</div>");
+
+                    sb.AppendLine("<div class='info-card'><div class='info-title'>Datos Generales</div><div class='info-grid cols3'>");
+                    sb.AppendLine($"<div class='info-item'><label>Folio / N&uacute;m. Contrato</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.folio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Estado</label><div class='val'>Chiapas</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Municipio</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(accion.municipio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Localidad</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(accion.localidad)}</div></div>");
+                    string latRep  = !string.IsNullOrWhiteSpace(seg.latitud)  ? seg.latitud  : accion.latitud;
+                    string lonRep  = !string.IsNullOrWhiteSpace(seg.longitud) ? seg.longitud : accion.longitud;
+                    string descUbic = !string.IsNullOrWhiteSpace(seg.direccion) ? seg.direccion
+                                     : (!string.IsNullOrWhiteSpace(seg.referencia) ? seg.referencia
+                                        : (!string.IsNullOrWhiteSpace(accion.descLocalidad) ? accion.descLocalidad
+                                           : seg.descripcionObra));
+                    sb.AppendLine($"<div class='info-item'><label>Latitud</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(latRep)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Longitud</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(lonRep)}</div></div>");
+                    if (!string.IsNullOrWhiteSpace(descUbic))
+                        sb.AppendLine($"<div class='info-item span3'><label>Descripci&oacute;n de Ubicaci&oacute;n</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(descUbic)}</div></div>");
+                    if (!string.IsNullOrWhiteSpace(seg.referencia))
+                        sb.AppendLine($"<div class='info-item span3'><label>Referencia</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(seg.referencia)}</div></div>");
+                    sb.AppendLine("</div></div>"); // info-grid + info-card
+
+                    sb.AppendLine("<div class='info-card'><div class='info-title'>Datos del Contrato</div><div class='info-grid cols3'>");
+                    sb.AppendLine($"<div class='info-item'><label>Fecha de Inicio</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.inicio)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Fecha de Conclusi&oacute;n</label><div class='val'>{System.Web.HttpUtility.HtmlEncode(contrato.fin)}</div></div>");
+                    sb.AppendLine($"<div class='info-item'><label>Monto Total del Proyecto</label><div class='val'>{monto}</div></div>");
+                    sb.AppendLine("</div></div>"); // info-grid + info-card
+
+                    sb.AppendLine("<div class='seccion-foto-titulo'>&#128247;&nbsp; Reporte Fotogr&aacute;fico</div>");
+
+                    if (partidas.Count == 0)
+                    {
+                        sb.AppendLine("<p style='color:#888;font-size:13px;text-align:center;padding:20px 0'>Sin partidas registradas.</p>");
+                    }
+                    else
+                    {
+                        foreach (var p in partidas)
+                        {
+                            long pid = (long)p.idPartida;
+                            sb.AppendLine("<div class='partida-card'><div class='partida-header'>");
+                            sb.AppendLine($"  <div class='partida-num'>Partida {p.orden}</div>");
+                            sb.AppendLine($"  <div class='partida-desc'>{System.Web.HttpUtility.HtmlEncode(p.descripcion)}</div>");
+                            sb.AppendLine("</div><div class='fotos-grid'>");
+                            for (int nf = 1; nf <= 2; nf++)
+                            {
+                                dynamic foto = null;
+                                if (fotos.ContainsKey(pid))
+                                    foto = fotos[pid].FirstOrDefault(f => f.numFoto == nf);
+                                sb.AppendLine("<div class='foto-slot'>");
+                                sb.AppendLine($"<div class='foto-label'>Foto {nf}</div>");
+                                if (foto != null && !string.IsNullOrEmpty(foto.ruta))
+                                {
+                                    string url = toUrl(foto.ruta);
+                                    sb.AppendLine($"<img src='{url}' alt='Foto {nf}'>");
+                                    if (!string.IsNullOrEmpty(foto.descripcion))
+                                        sb.AppendLine($"<div class='foto-desc'>{System.Web.HttpUtility.HtmlEncode(foto.descripcion)}</div>");
+                                    if (!string.IsNullOrEmpty(foto.latitud) || !string.IsNullOrEmpty(foto.longitud))
+                                        sb.AppendLine($"<div class='foto-coords'>📍 {foto.latitud}, {foto.longitud}</div>");
+                                }
+                                else
+                                {
+                                    sb.AppendLine("<div class='foto-placeholder'>Sin foto</div>");
+                                }
+                                sb.AppendLine("</div>"); // foto-slot
+                            }
+                            sb.AppendLine("</div></div>"); // fotos-grid + partida-card
+                        }
+                    }
+
+                    sb.AppendLine("</div>"); // body
+                    sb.AppendLine($"<div class='footer'>Reporte generado el {fechaGen} &nbsp;|&nbsp; H. Ayuntamiento Municipal de Chil&oacute;n, Chiapas 2024&ndash;2027</div>");
+                    sb.AppendLine("</div>"); // page
+                    sb.AppendLine("<div class='no-print' style='text-align:center;padding:12px 0 8px'>");
+                    sb.AppendLine("<button class='print-btn' onclick='window.print()'>🖨️ Imprimir / Guardar PDF</button>");
+                    sb.AppendLine("<p style='margin-top:8px;font-size:11px;color:#888;padding-bottom:16px'>Tip: desactiva <b>Encabezados y pies de p&aacute;gina</b> en el di&aacute;logo de impresi&oacute;n.</p>");
+                    sb.AppendLine("</div>");
+                    sb.AppendLine("</body></html>");
+
+                    var response = Request.CreateResponse(System.Net.HttpStatusCode.OK);
+                    response.Content = new System.Net.Http.StringContent(sb.ToString(), Encoding.UTF8, "text/html");
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                return MsgErrorF("Error generando reporte final: " + ex.Message);
+            }
+        }
+
+        private System.Net.Http.HttpResponseMessage MsgErrorF(string msg)
         {
             var html = $"<!DOCTYPE html><html><body style='font-family:Arial;padding:40px;color:#c00'><h3>Error</h3><p>{System.Web.HttpUtility.HtmlEncode(msg)}</p></body></html>";
             var r = Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError);

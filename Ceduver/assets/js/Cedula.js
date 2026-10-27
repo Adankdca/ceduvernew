@@ -1420,16 +1420,8 @@ var CedulaModule = function () {
                     $('#txtNoCoincideRubroFinal').val(df.descripcionNoCoincideRubro);
                     $('#txtDescripcionTrabajosFinal').val(df.descripcionTrabajosRealizados);
 
-                    // — Sección C: fotos con botones descargar/eliminar —
-                    for (var i = 1; i <= 6; i++) {
-                        var rutaFoto = df['foto' + i];
-                        if (rutaFoto) {
-                            $('#hddRutaFoto' + i + 'Final').val(rutaFoto);
-                            $('#imgFoto' + i + 'Final').attr('src', rutaFoto).show();
-                            $('#placeholderFoto' + i + 'Final').hide();
-                            $('#accionesFoto' + i + 'Final').show();
-                        }
-                    }
+                    // — Sección C: fotos por partidas (cierre) —
+                    cargarPartidasFotosFinal(idAcciones, df.idSeguimiento);
 
                 } else {
                     // ══ MODO AGREGAR: primera vez, pre-cargar del último seguimiento tipo S ══
@@ -1456,11 +1448,10 @@ var CedulaModule = function () {
                             $('#txtCostoTotalFinal').val(parseFloat(seg.costoTotal || 0).toFixed(2));
                         }
                     });
+                    // Primera vez: no hay idseguimiento aún, cargar solo partidas sin fotos
+                    cargarPartidasFotosFinal(idAcciones, 0);
                 }
             });
-
-            // Cargar partidas con fotos para Sección C Final
-            cargarPartidasFotosFinal(idAcciones);
 
             $('#modalDatosFinales').modal('show');
         });
@@ -1653,15 +1644,45 @@ var CedulaModule = function () {
     //======================================================================
     var _idFichaTecnicaActual = 0; // guarda el id tras cargar datos existentes
 
+    // ── Helper: recalcula totales y saldos de la tabla financiera ────────
+    var recalcularFism = function () {
+        var invProg   = parseFloat($('#txtInversionProgramadaFism').val())  || 0;
+        var aportProg = parseFloat($('#txtAportacionProgramadaFism').val()) || 0;
+        var otrosProg = parseFloat($('#txtotrosprogramada').val())          || 0;
+
+        var invEjer   = parseFloat($('#txtInversionEjercidaFism').val())    || 0;
+        var aportEjer = parseFloat($('#txtAportacionEjercidaFism').val())   || 0;
+        var otrosEjer = parseFloat($('#txtotrosejercida').val())            || 0;
+
+        var totProg = invProg + aportProg + otrosProg;
+        var totEjer = invEjer + aportEjer + otrosEjer;
+
+        $('#txttotalprogramada').val(totProg.toFixed(2));
+        $('#txttotalejercida').val(totEjer.toFixed(2));
+
+        // Saldo = Programado - Ejercido por fila
+        var saldoF = invProg   - invEjer;
+        var saldoA = aportProg - aportEjer;
+        var saldoO = otrosProg - otrosEjer;
+        var saldoT = totProg   - totEjer;
+
+        $('#txtsaldofism').val(saldoF.toFixed(2));
+        $('#txtaportacionfism').val(saldoA.toFixed(2));
+        $('#txtotrossaldofism').val(saldoO.toFixed(2));
+        $('#txttotalsaldo').val(saldoT.toFixed(2));
+    };
+
     var abrirFichaFism = function (idAcciones) {
         limpiarFormularioFism();
         $('#hddIdAccionFism').val(idAcciones);
         _idFichaTecnicaActual = 0;
 
-        // 1. Encabezado (datos generales del encabezado)
+        // 1. Encabezado
         $.get(baseUrl + 'GetDatosEncabezadoFism/' + idAcciones, function (data) {
             $('#lblObraFism').text(data.nombreObra);
             $('#lblRubroFism').text(data.rubro);
+            $('#lblSubclasificacionFism').text(data.subclasificacion || '');
+            $('#lblModalidadFism').text(data.modalidad || '');
             $('#lblContratoFism').text(data.numContrato);
             $('#lblLocalidadFism').text(data.localidad);
             $('#lblMontoFism').text('$' + parseFloat(data.montoContratado || 0)
@@ -1676,66 +1697,74 @@ var CedulaModule = function () {
             $('#hddIdProgramaFism').val(data.idPrograma);
         });
 
-        // 2. Datos FISM existentes (modificar / nuevo)
+        // 2. Datos FISM existentes
         $.get(baseUrl + 'GetFichaFism/' + idAcciones, function (data) {
             if (data) {
-                // ── MODO MODIFICAR ──
                 $('#hddAccionMovFism').val('M');
                 _idFichaTecnicaActual = data.idFichaTecnica || 0;
 
-                $('#txtInversionProgramadaFism').val(parseFloat(data.inversionProgramadaFism || 0).toFixed(2));
-                $('#txtInversionEjercidaFism').val(parseFloat(data.inversionEjercidaFism || 0).toFixed(2));
-                $('#txtAportacionProgramadaFism').val(parseFloat(data.aportacionProgramadaFism || 0).toFixed(2));
-                $('#txtAportacionEjercidaFism').val(parseFloat(data.aportacionEjercidaFism || 0).toFixed(2));
-                $('#txtDictamenFism').val(data.dictamen);
+                // Financiero
+                $('#txtInversionProgramadaFism').val(parseFloat(data.inversionProgramadaFism  || 0).toFixed(2));
+                $('#txtInversionEjercidaFism').val(parseFloat(data.inversionEjercidaFism      || 0).toFixed(2));
+                $('#txtAportacionProgramadaFism').val(parseFloat(data.aportacionProgramadaFism|| 0).toFixed(2));
+                $('#txtAportacionEjercidaFism').val(parseFloat(data.aportacionEjercidaFism    || 0).toFixed(2));
+                $('#txtotrosprogramada').val(parseFloat(data.otrosprogramado                  || 0).toFixed(2));
+                $('#txtotrosejercida').val(parseFloat(data.otrosejercida                      || 0).toFixed(2));
+                // Los totales/saldo se recalculan tras asignar
+                recalcularFism();
 
-                // ✅ Fechas: Controller ya regresa dd/MM/yyyy → asignar DIRECTO (sin formatearFechaInput)
+                // Dictamen, fechas
+                $('#txtDictamenFism').val(data.dictamen);
                 $('#txtFechaInicioProgramadaFism').val(data.programadoFechaInicial);
                 $('#txtFechaFinalProgramadaFism').val(data.programadoFechaFinal);
-                $('#txtContratoImporteFism').val(parseFloat(data.convenioContratoImporte || 0).toFixed(2));
+
+                // Convenios
+                $('#txtContratoImporteFism').val(parseFloat(data.convenioContratoImporte     || 0).toFixed(2));
                 $('#txtContratoInicioFism').val(data.convenioContratoFechaInicio);
                 $('#txtContratoFinFism').val(data.convenioContratoFechaFin);
-                $('#txtDiferidoImporteFism').val(parseFloat(data.convenioDiferidoImporte || 0).toFixed(2));
+                $('#txtDiferidoImporteFism').val(parseFloat(data.convenioDiferidoImporte     || 0).toFixed(2));
                 $('#txtDiferidoInicioFism').val(data.convenioDiferidoFechaInicio);
                 $('#txtDiferidoFinFism').val(data.convenioDiferidoFechaFin);
-                $('#txtAmpliacionImporteFism').val(parseFloat(data.ampliacionPlazoImporte || 0).toFixed(2));
+                $('#txtAmpliacionImporteFism').val(parseFloat(data.ampliacionPlazoImporte    || 0).toFixed(2));
                 $('#txtAmpliacionInicioFism').val(data.ampliacionPlazoFechaInicio);
                 $('#txtAmpliacionFinFism').val(data.ampliacionPlazoFechaFin);
                 $('#txtObservacionesFism').val(data.observaciones);
 
-                // ✅ Llamar con las rutas que devuelve el Controller
-                renderFotosFism(data.foto1 || '', data.foto2 || '');
+                // Nuevos campos
+                $('#txtoficioreg').val(data.oficioreg    || '');
+                $('#txtnumobramun').val(data.numobramun  || '');
+                $('#txtdescripcionobrafism').val(data.descripcionobrafism || '');
+                $('#txtavancefisicofism').val(parseFloat(data.avancefisicofism    || 0).toFixed(0));
+                $('#txtavancefinancierofism').val(parseFloat(data.avancefinancierofism || 0).toFixed(0));
+
+                // Fotos georeferenciadas
+                mostrarFotoGeoFism('inicio',     data.fotoinicio    || '', data.latitudinicio    || '', data.longitudinicio    || '');
+                mostrarFotoGeoFism('intermedio', data.fotointermedio|| '', data.latitudintermedio|| '', data.longitudintermedio|| '');
+                mostrarFotoGeoFism('final',      data.fotofinal     || '', data.latitudfinal     || '', data.longitudfinal     || '');
             } else {
-                // ── MODO AGREGAR ──
                 $('#hddAccionMovFism').val('A');
                 _idFichaTecnicaActual = 0;
             }
 
-            // ✅ Inicializar datepicker DENTRO del callback (evita race condition)
-            //    igual que el módulo Seguimiento ya corregido
             initDatepickersFism();
-
             $('#modalFichaFism').modal('show');
         });
     };
 
-    // ── Mostrar fotos al cargar datos (mismo patrón que Datos de Inicio) ──
-    var renderFotosFism = function (ruta1, ruta2) {
-        mostrarFotoFism(1, ruta1);
-        mostrarFotoFism(2, ruta2);
-    };
+    // ── Muestra foto georeferenciada ──────────────────────────────────────
+    var mostrarFotoGeoFism = function (etapa, ruta, lat, lon) {
+        var cap = etapa.charAt(0).toUpperCase() + etapa.slice(1);
+        var $img         = $('#imgFoto' + cap + 'Fism');
+        var $acciones    = $('#accionesFoto' + cap + 'Fism');
+        var $placeholder = $('#placeholderFoto' + cap + 'Fism');
+        var $hdd         = $('#hddRutaFoto' + cap + 'Fism');
 
-    var mostrarFotoFism = function (numero, ruta) {
-        var $img = $('#imgFoto' + numero + 'Fism');
-        var $acciones = $('#accionesFoto' + numero + 'Fism');
-        var $placeholder = $('#placeholderFoto' + numero + 'Fism');
-        var $hdd = $('#hddRutaFoto' + numero + 'Fism');
+        if (etapa === 'final') {
+            $acciones    = $('#accionesFotoFinalFismGeo');
+        }
 
         if (ruta && ruta.trim() !== '') {
-            // ✅ Usar endpoint del Controller para servir la imagen
-            //    evita problemas con rutas relativas en subdirectorio virtual
-            $img.attr('src', baseUrl + 'DescargarFoto?ruta=' + encodeURIComponent(ruta))
-                .show();
+            $img.attr('src', baseUrl + 'DescargarFoto?ruta=' + encodeURIComponent(ruta)).show();
             $acciones.show();
             $placeholder.hide();
             $hdd.val(ruta);
@@ -1745,8 +1774,12 @@ var CedulaModule = function () {
             $placeholder.show();
             $hdd.val('');
         }
-    };
 
+        // Coordenadas
+        var etapaLow = etapa.toLowerCase();
+        $('#txtlatitud'  + etapaLow).val(lat);
+        $('#txtlongitud' + etapaLow).val(lon);
+    };
 
     var initDatepickersFism = function () {
         var campos = [
@@ -1755,7 +1788,6 @@ var CedulaModule = function () {
             '#txtDiferidoInicioFism', '#txtDiferidoFinFism',
             '#txtAmpliacionInicioFism', '#txtAmpliacionFinFism'
         ];
-        // Destruir instancias previas si las hubiera
         $.each(campos, function (i, sel) {
             try { $(sel).datepicker('destroy'); } catch (e) { }
             $(sel).datepicker({
@@ -1768,26 +1800,34 @@ var CedulaModule = function () {
     };
 
     var limpiarFormularioFism = function () {
+        // Financiero
         $('#txtInversionProgramadaFism, #txtInversionEjercidaFism').val('0.00');
         $('#txtAportacionProgramadaFism, #txtAportacionEjercidaFism').val('0.00');
-        $('#txtDictamenFism, #txtObservacionesFism').val('');
+        $('#txtotrosprogramada, #txtotrosejercida').val('0.00');
+        $('#txttotalprogramada, #txttotalejercida').val('0.00');
+        $('#txtsaldofism, #txtaportacionfism, #txtotrossaldofism, #txttotalsaldo').val('0.00');
+        // Dictamen, descripción, avances
+        $('#txtDictamenFism, #txtObservacionesFism, #txtdescripcionobrafism').val('');
+        $('#txtavancefisicofism, #txtavancefinancierofism').val('0');
+        // Oficios
+        $('#txtoficioreg, #txtnumobramun').val('');
+        // Fechas
         $('#txtFechaInicioProgramadaFism, #txtFechaFinalProgramadaFism').val('');
         $('#txtContratoImporteFism, #txtDiferidoImporteFism, #txtAmpliacionImporteFism').val('0.00');
         $('#txtContratoInicioFism, #txtContratoFinFism').val('');
         $('#txtDiferidoInicioFism, #txtDiferidoFinFism').val('');
         $('#txtAmpliacionInicioFism, #txtAmpliacionFinFism').val('');
-        // Limpiar fotos — mismo patrón que Datos de Inicio
-        [1, 2].forEach(function (n) {
-            $('#imgFoto' + n + 'Fism').hide().attr('src', '');
-            $('#accionesFoto' + n + 'Fism').hide();
-            $('#placeholderFoto' + n + 'Fism').show();
-            $('#fileFoto' + n + 'Fism').val('');
-            $('#hddRutaFoto' + n + 'Fism').val('');
+        // Fotos georeferenciadas
+        ['inicio', 'intermedio', 'final'].forEach(function (et) {
+            mostrarFotoGeoFism(et, '', '', '');
+            var cap = et.charAt(0).toUpperCase() + et.slice(1);
+            $('#fileFoto' + cap + 'Fism').val('');
         });
-        // Limpiar labels encabezado
-        $('#lblObraFism, #lblRubroFism, #lblContratoFism, #lblLocalidadFism').text('');
-        $('#lblMontoFism, #lblFuenteFism, #lblPeriodoInicioFism, #lblPeriodoFinFism').text('');
-        $('#lblClaveLocalidadFism, #lblProgramaFism, #lblDescripcionObraFism').text('');
+        // Labels encabezado
+        $('#lblObraFism, #lblRubroFism, #lblSubclasificacionFism, #lblModalidadFism').text('');
+        $('#lblContratoFism, #lblLocalidadFism, #lblMontoFism, #lblFuenteFism').text('');
+        $('#lblPeriodoInicioFism, #lblPeriodoFinFism, #lblClaveLocalidadFism').text('');
+        $('#lblProgramaFism, #lblDescripcionObraFism').text('');
         $('#hddAccionMovFism').val('A');
         _idFichaTecnicaActual = 0;
     };
@@ -1795,46 +1835,71 @@ var CedulaModule = function () {
     var guardarFichaFism = function () {
         var formData = new FormData();
 
-        // ── Encabezado / hidden ──
-        formData.append('IdAcciones', $('#hddIdAccionFism').val());
-        formData.append('IdObraProyecto', $('#hddIdObraFism').val());
-        formData.append('AccionMov', $('#hddAccionMovFism').val());
-        formData.append('IdPrograma', $('#hddIdProgramaFism').val());
-        formData.append('Programa', $('#lblProgramaFism').text());
-        formData.append('Obra', $('#lblObraFism').text());
-        formData.append('Localidad', $('#lblLocalidadFism').text());
-        formData.append('ClaveLocalidad', $('#lblClaveLocalidadFism').text());
+        // Encabezado
+        formData.append('IdAcciones',    $('#hddIdAccionFism').val());
+        formData.append('IdObraProyecto',  $('#hddIdObraFism').val());
+        formData.append('AccionMov',     $('#hddAccionMovFism').val());
+        formData.append('IdPrograma',    $('#hddIdProgramaFism').val());
+        formData.append('Programa',      $('#lblProgramaFism').text());
+        formData.append('Obra',          $('#lblObraFism').text());
+        formData.append('Localidad',     $('#lblLocalidadFism').text());
+        formData.append('ClaveLocalidad',  $('#lblClaveLocalidadFism').text());
         formData.append('DescripcionObra', $('#lblDescripcionObraFism').text());
-        formData.append('Contrato', $('#lblContratoFism').text());
+        formData.append('Contrato',      $('#lblContratoFism').text());
         formData.append('PeriodoInicio', $('#lblPeriodoInicioFism').text());
-        formData.append('PeriodoFin', $('#lblPeriodoFinFism').text());
+        formData.append('PeriodoFin',    $('#lblPeriodoFinFism').text());
 
-        // ── Campos numéricos ──
-        formData.append('InversionProgramadaFism', $('#txtInversionProgramadaFism').val());
-        formData.append('InversionEjercidaFism', $('#txtInversionEjercidaFism').val());
+        // Financiero
+        formData.append('InversionProgramadaFism',  $('#txtInversionProgramadaFism').val());
+        formData.append('InversionEjercidaFism',    $('#txtInversionEjercidaFism').val());
         formData.append('AportacionProgramadaFism', $('#txtAportacionProgramadaFism').val());
-        formData.append('AportacionEjercidaFism', $('#txtAportacionEjercidaFism').val());
-        formData.append('Dictamen', $('#txtDictamenFism').val());
+        formData.append('AportacionEjercidaFism',   $('#txtAportacionEjercidaFism').val());
+        formData.append('OtrosProgramado',          $('#txtotrosprogramada').val());
+        formData.append('OtrosEjercida',            $('#txtotrosejercida').val());
+        formData.append('TotalProgramado',          $('#txttotalprogramada').val());
+        formData.append('TotalEjercida',            $('#txttotalejercida').val());
+        formData.append('SaldoFism',                $('#txtsaldofism').val());
+        formData.append('AportacionFism',           $('#txtaportacionfism').val());
+        formData.append('OtrosSaldoFism',           $('#txtotrossaldofism').val());
+        formData.append('TotalSaldo',               $('#txttotalsaldo').val());
 
-        // ── Campos fecha (ya en dd/MM/yyyy del datepicker, ParseFecha del Controller los procesa) ──
-        formData.append('ProgramadoFechaInicial', $('#txtFechaInicioProgramadaFism').val());
-        formData.append('ProgramadoFechaFinal', $('#txtFechaFinalProgramadaFism').val());
-        formData.append('ConvenioContratoImporte', $('#txtContratoImporteFism').val());
-        formData.append('ConvenioContratoFechaInicio', $('#txtContratoInicioFism').val());
-        formData.append('ConvenioContratoFechaFin', $('#txtContratoFinFism').val());
-        formData.append('ConvenioDiferidoImporte', $('#txtDiferidoImporteFism').val());
-        formData.append('ConvenioDiferidoFechaInicio', $('#txtDiferidoInicioFism').val());
-        formData.append('ConvenioDiferidoFechaFin', $('#txtDiferidoFinFism').val());
-        formData.append('AmpliacionPlazoImporte', $('#txtAmpliacionImporteFism').val());
+        // Dictamen, fechas
+        formData.append('Dictamen',                   $('#txtDictamenFism').val());
+        formData.append('ProgramadoFechaInicial',     $('#txtFechaInicioProgramadaFism').val());
+        formData.append('ProgramadoFechaFinal',       $('#txtFechaFinalProgramadaFism').val());
+        formData.append('ConvenioContratoImporte',    $('#txtContratoImporteFism').val());
+        formData.append('ConvenioContratoFechaInicio',  $('#txtContratoInicioFism').val());
+        formData.append('ConvenioContratoFechaFin',   $('#txtContratoFinFism').val());
+        formData.append('ConvenioDiferidoImporte',    $('#txtDiferidoImporteFism').val());
+        formData.append('ConvenioDiferidoFechaInicio',  $('#txtDiferidoInicioFism').val());
+        formData.append('ConvenioDiferidoFechaFin',   $('#txtDiferidoFinFism').val());
+        formData.append('AmpliacionPlazoImporte',     $('#txtAmpliacionImporteFism').val());
         formData.append('AmpliacionPlazoFechaInicio', $('#txtAmpliacionInicioFism').val());
-        formData.append('AmpliacionPlazoFechaFin', $('#txtAmpliacionFinFism').val());
-        formData.append('Observaciones', $('#txtObservacionesFism').val());
+        formData.append('AmpliacionPlazoFechaFin',    $('#txtAmpliacionFinFism').val());
+        formData.append('Observaciones',              $('#txtObservacionesFism').val());
 
-        // ── Fotos (solo si el usuario seleccionó archivo nuevo) ──
-        var f1 = $('#fileFoto1Fism')[0].files[0];
-        var f2 = $('#fileFoto2Fism')[0].files[0];
-        if (f1) formData.append('Foto1', f1);
-        if (f2) formData.append('Foto2', f2);
+        // Nuevos campos
+        formData.append('Oficioreg',          $('#txtoficioreg').val());
+        formData.append('Numobramun',         $('#txtnumobramun').val());
+        formData.append('Descripcionobrafism',  $('#txtdescripcionobrafism').val());
+        formData.append('Avancefisicofism',   $('#txtavancefisicofism').val());
+        formData.append('Avancefinancierofism', $('#txtavancefinancierofism').val());
+
+        // Coordenadas fotos
+        formData.append('Latitudinicio',      $('#txtlatitudinicio').val());
+        formData.append('Longitudinicio',     $('#txtlongitudinicio').val());
+        formData.append('Latitudintermedio',  $('#txtlatitudintermedio').val());
+        formData.append('Longitudintermedio', $('#txtlongitudintermedio').val());
+        formData.append('Latitudfinal',       $('#txtlatitudfinal').val());
+        formData.append('Longitudfinal',      $('#txtlongitudfinal').val());
+
+        // Fotos (sólo si el usuario seleccionó archivo nuevo)
+        var fI = $('#fileFotoInicioFism')[0].files[0];
+        var fM = $('#fileFotoIntermedioFism')[0].files[0];
+        var fF = $('#fileFotoFinalFism')[0].files[0];
+        if (fI) formData.append('FotoInicio',    fI);
+        if (fM) formData.append('FotoIntermedio', fM);
+        if (fF) formData.append('FotoFinal',     fF);
 
         $.ajax({
             url: baseUrl + 'GuardarFichaFism',
@@ -1852,15 +1917,14 @@ var CedulaModule = function () {
         });
     };
 
-    // ── Eliminar foto FISM individual ─────────────────────────────────────────────
-    // Se llama desde los botones generados en renderUnidadFotoFism
-    var eliminarFotoFism = function (numero) {
+    // ── Eliminar foto georeferenciada FISM ────────────────────────────────
+    var eliminarFotoGeoFism = function (etapa) {
         if (_idFichaTecnicaActual <= 0) {
             Swal.fire('Aviso', 'Guarda la ficha primero antes de eliminar fotos.', 'warning');
             return;
         }
-        var columnaImg = 'imgfoto' + numero;
-        var columnaPath = 'foto' + numero;
+        var mapCol = { inicio: 'imgfotoinicio', intermedio: 'imgfotointermedio', final: 'imgfotofinal' };
+        var mapPath= { inicio: 'fotoinicio',    intermedio: 'fotointermedio',    final: 'fotofinal'    };
 
         Swal.fire({
             title: '¿Eliminar foto?', text: 'Esta acción no se puede deshacer.',
@@ -1873,11 +1937,12 @@ var CedulaModule = function () {
                     type: 'POST', contentType: 'application/json',
                     data: JSON.stringify({
                         idFichaTecnica: _idFichaTecnicaActual,
-                        columnaImg: columnaImg, columnaPath: columnaPath
+                        columnaImg:  mapCol[etapa],
+                        columnaPath: mapPath[etapa]
                     }),
                     success: function () {
                         Swal.fire('Eliminada', 'La foto fue eliminada.', 'success');
-                        mostrarFotoFism(numero, '');
+                        mostrarFotoGeoFism(etapa, '', '', '');
                     },
                     error: function (xhr) { Swal.fire('Error', xhr.responseText, 'error'); }
                 });
@@ -1885,16 +1950,16 @@ var CedulaModule = function () {
         });
     };
 
-    // ── Descargar foto FISM (reutiliza el endpoint genérico DescargarFoto) ────────
-    var descargarFotoFism = function (numero) {
-        var ruta = $('#hddRutaFoto' + numero + 'Fism').val();
+    // Alias para compatibilidad (los botones del modal llaman a eliminarFotoFism(numero) en algunos lugares)
+    var eliminarFotoFism = eliminarFotoGeoFism;
+    var descargarFotoFism = function (etapa) {
+        var cap = etapa.charAt(0).toUpperCase() + etapa.slice(1);
+        var ruta = $('#hddRutaFoto' + cap + 'Fism').val();
         if (!ruta) { Swal.fire('Aviso', 'No hay foto guardada.', 'info'); return; }
         var link = document.createElement('a');
         link.href = baseUrl + 'DescargarFoto?ruta=' + encodeURIComponent(ruta);
         link.download = '';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
     //======================================================================
@@ -2259,11 +2324,7 @@ var CedulaModule = function () {
     var imprimirFinal = function (idAcciones) {
         $.get(baseUrl + 'GetIdSeguimientoFinal/' + idAcciones, function (data) {
             if (data && data.idSeguimiento) {
-                var url = 'Reportes/CRNET.aspx?reporte=Reportefinal'
-                    + '&p0=' + idAcciones
-                    + '&p1=' + data.idSeguimiento
-                    + '&p2=' + idAcciones
-                    + '&p3=' + data.idSeguimiento;
+                var url = baseUrl + 'ReporteFinal/' + data.idSeguimiento;
                 window.open(url, '_blank');
             } else {
                 Swal.fire('Aviso', 'No existe registro final para imprimir.', 'warning');
@@ -2273,8 +2334,7 @@ var CedulaModule = function () {
 
 
     var imprimirFichaFism = function (idAcciones) {
-        var url = 'Reportes/CRNET.aspx?reporte=Fichatecnicafism'
-            + '&p0=' + idAcciones;
+        var url = baseUrl + 'GenerarFichaFism/' + idAcciones;
         window.open(url, '_blank');
     };
 
@@ -2658,11 +2718,9 @@ var CedulaModule = function () {
         });
     };
 
-    var cargarPartidasFotosFinal = function (idAcciones) {
+    var cargarPartidasFotosFinal = function (idAcciones, idSegFinal) {
         limpiarPartidasFotosFinal();
-        // Reutilizamos el mismo endpoint GetPartidasConFotosSeg con idSeguimiento=0
-        // para obtener las partidas del inicio; luego recargamos con el id del final si existe
-        var idSegFinal = parseInt($('#hddIdSeguimientoFinal').val()) || 0;
+        idSegFinal = parseInt(idSegFinal) || 0;
         $.ajax({
             url: baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + idSegFinal,
             type: 'GET',
@@ -2916,6 +2974,11 @@ var CedulaModule = function () {
             initEventosPartidasFotosFinal();
             initEventosPartidas();
             TablaCedulas.init();
+
+            // Auto-cálculo tabla financiera FISM (delegado para funcionar tras modal show)
+            $(document).on('change blur', '#modalFichaFism .fism-calc', function () {
+                recalcularFism();
+            });
         },
         // Funciones publicas
         //******GEOREFERENCIA **********/
@@ -2938,8 +3001,10 @@ var CedulaModule = function () {
         eliminarFotoFinal: eliminarFotoFinal,
 
         abrirFichaFism: abrirFichaFism,
+        guardarFichaFism: guardarFichaFism,
         descargarFotoFism: descargarFotoFism,
         eliminarFotoFism: eliminarFotoFism,
+        eliminarFotoGeoFism: eliminarFotoGeoFism,
 
         abrirFiniquito: abrirFiniquito,
         abrirArchivoFiniquito: abrirArchivoFiniquito,
