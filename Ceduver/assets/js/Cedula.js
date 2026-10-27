@@ -1360,6 +1360,10 @@ var CedulaModule = function () {
         limpiarFormularioFinal();
         $('#hddIdAccionFinal').val(idAcciones);
 
+        // Parámetros para cargarPartidasFotosFinal, se asignan al resolver GetDatosFinales
+        // y se usan en el evento shown.bs.modal para garantizar que el DOM esté listo.
+        var _pendienteCargarPartidas = null; // { idAcciones, idSeg }
+
         // ── 1. Cargar encabezado ─────────────────────────────────────────────
         $.get(baseUrl + 'GetDatosEncabezado/' + idAcciones, function (enc) {
             $('#lblObraFinal').text(enc.nombreObra);
@@ -1420,8 +1424,8 @@ var CedulaModule = function () {
                     $('#txtNoCoincideRubroFinal').val(df.descripcionNoCoincideRubro);
                     $('#txtDescripcionTrabajosFinal').val(df.descripcionTrabajosRealizados);
 
-                    // — Sección C: fotos por partidas (cierre) —
-                    cargarPartidasFotosFinal(idAcciones, df.idSeguimiento);
+                    // — Sección C: marcar pendiente para cargar al abrir modal —
+                    _pendienteCargarPartidas = { idAcciones: idAcciones, idSeg: df.idSeguimiento };
 
                 } else {
                     // ══ MODO AGREGAR: primera vez, pre-cargar del último seguimiento tipo S ══
@@ -1448,11 +1452,18 @@ var CedulaModule = function () {
                             $('#txtCostoTotalFinal').val(parseFloat(seg.costoTotal || 0).toFixed(2));
                         }
                     });
-                    // Primera vez: no hay idseguimiento aún, cargar solo partidas sin fotos
-                    cargarPartidasFotosFinal(idAcciones, 0);
+                    // Primera vez: marcar pendiente para cargar al abrir modal
+                    _pendienteCargarPartidas = { idAcciones: idAcciones, idSeg: 0 };
                 }
             });
 
+            // ── 3. Mostrar modal; cargar partidas en shown.bs.modal (DOM listo) ──
+            $('#modalDatosFinales').one('shown.bs.modal', function () {
+                if (_pendienteCargarPartidas) {
+                    cargarPartidasFotosFinal(_pendienteCargarPartidas.idAcciones, _pendienteCargarPartidas.idSeg);
+                    _pendienteCargarPartidas = null;
+                }
+            });
             $('#modalDatosFinales').modal('show');
         });
     };
@@ -1969,43 +1980,51 @@ var CedulaModule = function () {
         limpiarFormularioFiniquito();
         $('#hddIdAccionFiniquito').val(idAcciones);
 
-        // Cargar encabezado
-        $.get(baseUrl + 'GetDatosEncabezadoFiniquito/' + idAcciones, function (data) {
-            $('#lblObraFiniquito').text(data.nombreObra);
-            $('#lblClaveMunicipalFiniquito').text('061');
-            $('#lblMunicipioFiniquito').text(data.localidad);
-            $('#lblNumeroObraFiniquito').text(data.numObra);
-            $('#lblContratoFiniquito').text(data.numContrato);
-            $('#lblContratistaFiniquito').text(data.contratista);
-            $('#lblDescripcionObraFiniquito').text(data.descripcionAccion);
-            $('#lblPeriodoInicioFiniquito').text(data.periodoInicio);
-            $('#lblPeriodoFinFiniquito').text(data.periodoFin);
-            $('#lblFuenteFiniquito').text(data.fuenteFinanciamiento);
-            $('#lblMontoFuenteFiniquito').text('$' + parseFloat(data.montoFuente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 }));
-            $('#hddIdObraFiniquito').val(data.idObraProyecto);
-            $('#txtMontoFuenteFiniquito').val(data.montoFuente);
-            $('#txtFechaProgramadaInicioFiniquito').val(data.periodoInicio);
-            $('#txtDescripcionObraFiniquitoInput').val(data.descripcionAccion);
-        });
+        // Primero cargamos datos existentes del finiquito
+        $.get(baseUrl + 'GetFiniquito/' + idAcciones, function (finiquito) {
+            var tieneRegistro = finiquito !== null && finiquito !== undefined && finiquito.idFiniquito;
 
-        // Cargar datos existentes
-        $.get(baseUrl + 'GetFiniquito/' + idAcciones, function (data) {
-            if (data) {
+            // Cargar encabezado — siempre llena las etiquetas de solo lectura,
+            // pero solo sobreescribe los inputs editables si NO existe registro guardado
+            $.get(baseUrl + 'GetDatosEncabezadoFiniquito/' + idAcciones, function (enc) {
+                $('#lblObraFiniquito').text(enc.nombreObra);
+                $('#lblClaveMunicipalFiniquito').text('061');
+                $('#lblMunicipioFiniquito').text(enc.localidad);
+                $('#lblNumeroObraFiniquito').text(enc.numObra);
+                $('#lblContratoFiniquito').text(enc.numContrato);
+                $('#lblContratistaFiniquito').text(enc.contratista);
+                $('#lblDescripcionObraFiniquito').text(enc.descripcionAccion);
+                $('#lblPeriodoInicioFiniquito').text(enc.periodoInicio);
+                $('#lblPeriodoFinFiniquito').text(enc.periodoFin);
+                $('#lblFuenteFiniquito').text(enc.fuenteFinanciamiento);
+                $('#lblMontoFuenteFiniquito').text('$' + parseFloat(enc.montoFuente || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 }));
+                $('#hddIdObraFiniquito').val(enc.idObraProyecto);
+
+                if (!tieneRegistro) {
+                    // Modo alta: pre-cargar inputs con datos del encabezado
+                    $('#txtMontoFuenteFiniquito').val(enc.montoFuente);
+                    $('#txtFechaProgramadaInicioFiniquito').val(enc.periodoInicio);
+                    $('#txtDescripcionObraFiniquitoInput').val(enc.descripcionAccion);
+                }
+            });
+
+            if (tieneRegistro) {
+                // Modo modificación: cargar exactamente lo que se guardó
                 $('#hddAccionMovFiniquito').val('M');
-                $('#txtProgramaFiniquito').val(data.programa);
-                $('#txtSubprogramaFiniquito').val(data.subprograma);
-                $('#txtMontoFuenteFiniquito').val(data.montoFuente);
-                $('#txtPresupuestoDevengadoFiniquito').val(data.devengado);
-                $('#txtLatitudFiniquito').val(data.latitud);
-                $('#txtLongitudFiniquito').val(data.longitud);
-                $('#txtFechaProgramadaInicioFiniquito').val(data.programadoInicio);
-                $('#txtFechaRealFinFiniquito').val(data.realTermino);
-                $('#txtAvanceFinancieroFiniquito').val(data.financiero);
-                $('#txtDescripcionObraFiniquitoInput').val(data.descripcionObra);
-                $('#txtObservacionesFiniquito').val(data.observaciones);
+                $('#txtProgramaFiniquito').val(finiquito.programa);
+                $('#txtSubprogramaFiniquito').val(finiquito.subprograma);
+                $('#txtMontoFuenteFiniquito').val(finiquito.montoFuente);
+                $('#txtPresupuestoDevengadoFiniquito').val(finiquito.devengado);
+                $('#txtLatitudFiniquito').val(finiquito.latitud);
+                $('#txtLongitudFiniquito').val(finiquito.longitud);
+                $('#txtFechaProgramadaInicioFiniquito').val(finiquito.programadoInicio);
+                $('#txtFechaRealFinFiniquito').val(finiquito.realTermino);
+                $('#txtAvanceFinancieroFiniquito').val(finiquito.financiero);
+                $('#txtDescripcionObraFiniquitoInput').val(finiquito.descripcionObra);
+                $('#txtObservacionesFiniquito').val(finiquito.observaciones);
             } else {
+                // Modo alta: pre-cargar coordenadas y fecha final de otros módulos
                 $('#hddAccionMovFiniquito').val('A');
-                // Cargar datos de inicio y final si existen
                 $.get(baseUrl + 'GetDatosInicioParaFiniquito/' + idAcciones, function (inicio) {
                     if (inicio) {
                         $('#txtLatitudFiniquito').val(inicio.latitud);
@@ -2539,13 +2558,16 @@ var CedulaModule = function () {
     // Carga partidas de la acción y sus fotos ya guardadas para idSeguimiento
     var cargarPartidasFotosSeg = function (idAcciones, idSeguimiento) {
         limpiarPartidasFotosSeg();
+        var url = baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + (idSeguimiento || 0);
+        console.log('[CEDUVER] cargarPartidasFotosSeg → URL:', url);
         $.ajax({
-            url: baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + (idSeguimiento || 0),
+            url: url,
             type: 'GET',
             success: function (data) {
+                console.log('[CEDUVER] GetPartidasConFotosSeg respuesta:', data);
                 // Respuesta de diagnóstico (objeto con sinInicio=true)
                 if (data && data.sinInicio) {
-                    console.warn('[CEDUVER] GetPartidasConFotosSeg:', data.mensaje);
+                    console.warn('[CEDUVER] GetPartidasConFotosSeg: sin inicio →', data.mensaje);
                     console.warn('[CEDUVER] Registros encontrados:', data.registros);
                     $('#sinPartidasFotosSeg').html(
                         '<i class="fas fa-exclamation-triangle fa-2x mb-2 d-block text-warning"></i>' +
@@ -2578,11 +2600,13 @@ var CedulaModule = function () {
                             }
                         };
                     });
+                } else {
+                    console.warn('[CEDUVER] GetPartidasConFotosSeg: sin partidas (lista vacía). Verifica que se hayan guardado partidas en el módulo de Inicio.');
                 }
                 renderizarPartidasFotosSeg();
             },
-            error: function () {
-                // Si falla simplemente muestra vacío; no interrumpe el flujo
+            error: function (xhr) {
+                console.error('[CEDUVER] GetPartidasConFotosSeg error:', xhr.status, xhr.responseText);
                 renderizarPartidasFotosSeg();
             }
         });
@@ -2626,7 +2650,10 @@ var CedulaModule = function () {
             }
         });
 
-        if (!hayAlgo) {
+        // Siempre enviar si hay partidas cargadas (aunque no haya fotos/texto nuevos),
+        // para garantizar que los metadatos queden registrados en BD.
+        // El servidor hace upsert, por lo que reenviar datos existentes es seguro.
+        if (!hayAlgo && _partidasFotosSeg.length === 0) {
             if (typeof callback === 'function') callback();
             return;
         }
@@ -2661,7 +2688,9 @@ var CedulaModule = function () {
     };
 
     var renderizarPartidasFotosFinal = function () {
+        console.log('[CEDUVER-FINAL] renderizarPartidasFotosFinal llamado. _partidasFotosFinal.length:', _partidasFotosFinal ? _partidasFotosFinal.length : 'null');
         var $lista = $('#listaPartidasFotosFinal');
+        console.log('[CEDUVER-FINAL] #listaPartidasFotosFinal existe en DOM:', $lista.length, '| visible:', $lista.is(':visible'), '| modal abierto:', $('#modalDatosFinales').hasClass('show'));
         $lista.empty();
         if (!_partidasFotosFinal || _partidasFotosFinal.length === 0) {
             $('#sinPartidasFotosFinal').html(
@@ -2721,18 +2750,24 @@ var CedulaModule = function () {
     var cargarPartidasFotosFinal = function (idAcciones, idSegFinal) {
         limpiarPartidasFotosFinal();
         idSegFinal = parseInt(idSegFinal) || 0;
+        var url = baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + idSegFinal;
+        console.log('[CEDUVER-FINAL] cargarPartidasFotosFinal → URL:', url);
         $.ajax({
-            url: baseUrl + 'GetPartidasConFotosSeg?idAcciones=' + idAcciones + '&idSeguimiento=' + idSegFinal,
+            url: url,
             type: 'GET',
             success: function (data) {
+                console.log('[CEDUVER-FINAL] GetPartidasConFotosSeg respuesta:', JSON.stringify(data));
                 if (data && data.sinInicio) {
+                    console.warn('[CEDUVER-FINAL] sinInicio:', data.mensaje, data.registros);
                     $('#sinPartidasFotosFinal').html(
                         '<i class="fas fa-exclamation-triangle fa-2x mb-2 d-block text-warning"></i>' +
-                        '<small class="text-muted">No hay partidas registradas en el inicio de esta acci&oacute;n.</small>'
+                        '<small class="text-muted">No hay partidas registradas en el inicio de esta acci&oacute;n.</small>' +
+                        '<br><small class="text-danger" style="font-size:10px;">[Debug] ' + (data.mensaje||'') + '</small>'
                     ).show();
                     return;
                 }
                 if (data && data.length > 0) {
+                    console.log('[CEDUVER-FINAL] Partidas recibidas:', data.length);
                     _partidasFotosFinal = data.map(function (p) {
                         return {
                             idPartida: p.idPartida,
@@ -2742,10 +2777,15 @@ var CedulaModule = function () {
                             foto2: { idFoto: p.idFoto2||0, ruta: p.rutaFoto2||'', desc: p.descFoto2||'', lat: p.latFoto2||'', lon: p.lonFoto2||'', file: null }
                         };
                     });
+                } else {
+                    console.warn('[CEDUVER-FINAL] Respuesta vacía o sin partidas. data:', data);
                 }
                 renderizarPartidasFotosFinal();
             },
-            error: function () { renderizarPartidasFotosFinal(); }
+            error: function (xhr) {
+                console.error('[CEDUVER-FINAL] Error:', xhr.status, xhr.responseText);
+                renderizarPartidasFotosFinal();
+            }
         });
     };
 
@@ -2825,7 +2865,10 @@ var CedulaModule = function () {
             }
         });
 
-        if (!hayAlgo) {
+        // Siempre enviar si hay partidas cargadas (aunque no haya fotos/texto nuevos),
+        // para garantizar que los metadatos queden registrados en BD.
+        // El servidor hace upsert, por lo que reenviar datos existentes es seguro.
+        if (!hayAlgo && _partidasFotosFinal.length === 0) {
             if (typeof callback === 'function') callback();
             return;
         }

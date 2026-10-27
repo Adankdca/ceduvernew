@@ -1125,9 +1125,11 @@ CREATE TABLE TBLP_cedula_partidas_fotos (
                                 cmdUpd.Parameters.AddWithValue("@id", idFotoExistente);
                                 cmdUpd.ExecuteNonQuery();
                             }
-                            else if (!string.IsNullOrEmpty(rutaFinal) || !string.IsNullOrEmpty(desc) || !string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
+                            else
                             {
-                                // INSERT nuevo registro
+                                // INSERT nuevo registro (siempre, aunque esté vacío,
+                                // para que GetPartidasConFotosSeg encuentre el registro
+                                // y muestre las partidas correctamente al abrir el formulario)
                                 var cmdIns = new SqlCommand(@"
 INSERT INTO TBLP_cedula_partidas_fotos (idpartida, idseguimiento, numero_foto, ruta_foto, descripcion, latitud, longitud)
 VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
@@ -2663,9 +2665,34 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
         {
             try
             {
-                long idAcciones = Convert.ToInt64(data.IdAcciones);
+                long idAcciones     = Convert.ToInt64(data.IdAcciones);
                 long idObraProyecto = Convert.ToInt64(data.IdObraProyecto);
-                string accionMov = data.AccionMov;
+                string accionMov    = data.AccionMov?.ToString() ?? "A";
+
+                // Conversiones seguras para evitar fallo de cast con dynamic/JValue
+                decimal montoFuente = Convert.ToDecimal(data.MontoFuente  ?? 0);
+                decimal devengado   = Convert.ToDecimal(data.Devengado    ?? 0);
+                decimal financiero  = Convert.ToDecimal(data.Financiero   ?? 0);
+
+                string municipio          = data.Municipio?.ToString()          ?? "";
+                string numObra            = data.NumObra?.ToString()            ?? "";
+                string programa           = data.Programa?.ToString()           ?? "";
+                string subprograma        = data.Subprograma?.ToString()        ?? "";
+                string fuenteFinanc       = data.FuenteFinanciamiento?.ToString() ?? "";
+                string latitud            = data.Latitud?.ToString()            ?? "";
+                string longitud           = data.Longitud?.ToString()           ?? "";
+                string contrato           = data.Contrato?.ToString()           ?? "";
+                string contratista        = data.Contratista?.ToString()        ?? "";
+                string descripcionObra    = data.DescripcionObra?.ToString()    ?? "";
+                string observaciones      = data.Observaciones?.ToString()      ?? "";
+
+                // Las fechas llegan en dd/MM/yyyy — si vacías guardar NULL
+                string strProgramadoInicio = data.ProgramadoInicio?.ToString() ?? "";
+                string strRealTermino      = data.RealTermino?.ToString()      ?? "";
+                object programadoInicio = string.IsNullOrWhiteSpace(strProgramadoInicio)
+                                          ? (object)DBNull.Value : ParseFecha(strProgramadoInicio);
+                object realTermino      = string.IsNullOrWhiteSpace(strRealTermino)
+                                          ? (object)DBNull.Value : ParseFecha(strRealTermino);
 
                 using (var conn = new SqlConnection(connectionString))
                 {
@@ -2674,32 +2701,32 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                     if (accionMov == "A")
                     {
                         string sql = @"
-                            INSERT INTO TBLP_finiquito(IDobraproyecto, IDAcciones, municipio, numobra, programa, subprograma, 
-                                fuentefinanciamiento, montofuente, devengado, latitud, longuitud, 
+                            INSERT INTO TBLP_finiquito(IDobraproyecto, IDAcciones, municipio, numobra, programa, subprograma,
+                                fuentefinanciamiento, montofuente, devengado, latitud, longuitud,
                                 programadoinicio, realtermino, financiero, contrato, contratista, descripcionobra, observaciones)
                             VALUES(@idObraProyecto, @idAcciones, @municipio, @numObra, @programa, @subprograma,
                                 @fuenteFinanciamiento, @montoFuente, @devengado, @latitud, @longitud,
                                 @programadoInicio, @realTermino, @financiero, @contrato, @contratista, @descripcionObra, @observaciones)";
 
                         var cmd = new SqlCommand(sql, conn);
-                        cmd.Parameters.AddWithValue("@idObraProyecto", idObraProyecto);
-                        cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
-                        cmd.Parameters.AddWithValue("@municipio", (string)data.Municipio ?? "");
-                        cmd.Parameters.AddWithValue("@numObra", (string)data.NumObra ?? "");
-                        cmd.Parameters.AddWithValue("@programa", (string)data.Programa ?? "");
-                        cmd.Parameters.AddWithValue("@subprograma", (string)data.Subprograma ?? "");
-                        cmd.Parameters.AddWithValue("@fuenteFinanciamiento", (string)data.FuenteFinanciamiento ?? "");
-                        cmd.Parameters.AddWithValue("@montoFuente", (decimal)data.MontoFuente);
-                        cmd.Parameters.AddWithValue("@devengado", (decimal)data.Devengado);
-                        cmd.Parameters.AddWithValue("@latitud", (string)data.Latitud ?? "");
-                        cmd.Parameters.AddWithValue("@longitud", (string)data.Longitud ?? "");
-                        cmd.Parameters.AddWithValue("@programadoInicio", ParseFecha((string)data.ProgramadoInicio));
-                        cmd.Parameters.AddWithValue("@realTermino", ParseFecha((string)data.RealTermino));
-                        cmd.Parameters.AddWithValue("@financiero", (decimal)data.Financiero);
-                        cmd.Parameters.AddWithValue("@contrato", (string)data.Contrato ?? "");
-                        cmd.Parameters.AddWithValue("@contratista", (string)data.Contratista ?? "");
-                        cmd.Parameters.AddWithValue("@descripcionObra", (string)data.DescripcionObra ?? "");
-                        cmd.Parameters.AddWithValue("@observaciones", (string)data.Observaciones ?? "");
+                        cmd.Parameters.AddWithValue("@idObraProyecto",      idObraProyecto);
+                        cmd.Parameters.AddWithValue("@idAcciones",          idAcciones);
+                        cmd.Parameters.AddWithValue("@municipio",           municipio);
+                        cmd.Parameters.AddWithValue("@numObra",             numObra);
+                        cmd.Parameters.AddWithValue("@programa",            programa);
+                        cmd.Parameters.AddWithValue("@subprograma",         subprograma);
+                        cmd.Parameters.AddWithValue("@fuenteFinanciamiento",fuenteFinanc);
+                        cmd.Parameters.AddWithValue("@montoFuente",         montoFuente);
+                        cmd.Parameters.AddWithValue("@devengado",           devengado);
+                        cmd.Parameters.AddWithValue("@latitud",             latitud);
+                        cmd.Parameters.AddWithValue("@longitud",            longitud);
+                        cmd.Parameters.AddWithValue("@programadoInicio",    programadoInicio ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@realTermino",         realTermino      ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@financiero",          financiero);
+                        cmd.Parameters.AddWithValue("@contrato",            contrato);
+                        cmd.Parameters.AddWithValue("@contratista",         contratista);
+                        cmd.Parameters.AddWithValue("@descripcionObra",     descripcionObra);
+                        cmd.Parameters.AddWithValue("@observaciones",       observaciones);
                         cmd.ExecuteNonQuery();
                     }
                     else
@@ -2708,29 +2735,31 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                             UPDATE TBLP_finiquito SET
                                 IDobraproyecto = @idObraProyecto, municipio = @municipio, numobra = @numObra,
                                 programa = @programa, subprograma = @subprograma, fuentefinanciamiento = @fuenteFinanciamiento,
-                                montofuente = @montoFuente, latitud = @latitud, longuitud = @longitud,
+                                montofuente = @montoFuente, devengado = @devengado, latitud = @latitud, longuitud = @longitud,
                                 programadoinicio = @programadoInicio, realtermino = @realTermino, financiero = @financiero,
-                                contrato = @contrato, contratista = @contratista, descripcionobra = @descripcionObra, observaciones = @observaciones
+                                contrato = @contrato, contratista = @contratista, descripcionobra = @descripcionObra,
+                                observaciones = @observaciones
                             WHERE IDAcciones = @idAcciones";
 
                         var cmd = new SqlCommand(sql, conn);
-                        cmd.Parameters.AddWithValue("@idObraProyecto", idObraProyecto);
-                        cmd.Parameters.AddWithValue("@idAcciones", idAcciones);
-                        cmd.Parameters.AddWithValue("@municipio", (string)data.Municipio ?? "");
-                        cmd.Parameters.AddWithValue("@numObra", (string)data.NumObra ?? "");
-                        cmd.Parameters.AddWithValue("@programa", (string)data.Programa ?? "");
-                        cmd.Parameters.AddWithValue("@subprograma", (string)data.Subprograma ?? "");
-                        cmd.Parameters.AddWithValue("@fuenteFinanciamiento", (string)data.FuenteFinanciamiento ?? "");
-                        cmd.Parameters.AddWithValue("@montoFuente", (decimal)data.MontoFuente);
-                        cmd.Parameters.AddWithValue("@latitud", (string)data.Latitud ?? "");
-                        cmd.Parameters.AddWithValue("@longitud", (string)data.Longitud ?? "");
-                        cmd.Parameters.AddWithValue("@programadoInicio", ParseFecha((string)data.ProgramadoInicio));
-                        cmd.Parameters.AddWithValue("@realTermino", ParseFecha((string)data.RealTermino));
-                        cmd.Parameters.AddWithValue("@financiero", (decimal)data.Financiero);
-                        cmd.Parameters.AddWithValue("@contrato", (string)data.Contrato ?? "");
-                        cmd.Parameters.AddWithValue("@contratista", (string)data.Contratista ?? "");
-                        cmd.Parameters.AddWithValue("@descripcionObra", (string)data.DescripcionObra ?? "");
-                        cmd.Parameters.AddWithValue("@observaciones", (string)data.Observaciones ?? "");
+                        cmd.Parameters.AddWithValue("@idObraProyecto",      idObraProyecto);
+                        cmd.Parameters.AddWithValue("@idAcciones",          idAcciones);
+                        cmd.Parameters.AddWithValue("@municipio",           municipio);
+                        cmd.Parameters.AddWithValue("@numObra",             numObra);
+                        cmd.Parameters.AddWithValue("@programa",            programa);
+                        cmd.Parameters.AddWithValue("@subprograma",         subprograma);
+                        cmd.Parameters.AddWithValue("@fuenteFinanciamiento",fuenteFinanc);
+                        cmd.Parameters.AddWithValue("@montoFuente",         montoFuente);
+                        cmd.Parameters.AddWithValue("@devengado",           devengado);   // faltaba en UPDATE
+                        cmd.Parameters.AddWithValue("@latitud",             latitud);
+                        cmd.Parameters.AddWithValue("@longitud",            longitud);
+                        cmd.Parameters.AddWithValue("@programadoInicio",    programadoInicio ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@realTermino",         realTermino      ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@financiero",          financiero);
+                        cmd.Parameters.AddWithValue("@contrato",            contrato);
+                        cmd.Parameters.AddWithValue("@contratista",         contratista);
+                        cmd.Parameters.AddWithValue("@descripcionObra",     descripcionObra);
+                        cmd.Parameters.AddWithValue("@observaciones",       observaciones);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -2739,7 +2768,7 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest("GuardarFiniquito: " + ex.Message);
             }
         }
 
