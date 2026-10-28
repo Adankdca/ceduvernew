@@ -799,23 +799,45 @@ namespace Ceduver.Controllers
                         END", conn);
                     cmdCreate.ExecuteNonQuery();
 
-                    // Borrar partidas existentes para este seguimiento y reinsertar
-                    var cmdDel = new SqlCommand("DELETE FROM TBLP_cedula_partidas WHERE idseguimiento = @id", conn);
-                    cmdDel.Parameters.AddWithValue("@id", req.IdSeguimiento);
-                    cmdDel.ExecuteNonQuery();
-
+                    // UPSERT partidas: actualizar descripcion si ya existe (mismo orden),
+                    // insertar si es nueva. NO borrar partidas existentes para no romper
+                    // las fotos de seguimiento/final que referencian idpartida.
                     if (req.Partidas != null)
                     {
+                        // 1. Obtener ordenes que llegan en la solicitud
+                        var ordenesNuevos = new System.Collections.Generic.HashSet<int>(
+                            req.Partidas.Select(p => p.Orden));
+
+                        // 2. Upsert cada partida recibida
                         foreach (var p in req.Partidas)
                         {
-                            var cmdIns = new SqlCommand(@"
-                                INSERT INTO TBLP_cedula_partidas (idseguimiento, orden, descripcion)
-                                VALUES (@id, @orden, @desc)", conn);
-                            cmdIns.Parameters.AddWithValue("@id", req.IdSeguimiento);
-                            cmdIns.Parameters.AddWithValue("@orden", p.Orden);
-                            cmdIns.Parameters.AddWithValue("@desc", (object)p.Descripcion ?? DBNull.Value);
-                            cmdIns.ExecuteNonQuery();
+                            var cmdUpsert = new SqlCommand(@"
+                                IF EXISTS (SELECT 1 FROM TBLP_cedula_partidas
+                                           WHERE idseguimiento=@id AND orden=@orden)
+                                    UPDATE TBLP_cedula_partidas
+                                       SET descripcion=@desc
+                                     WHERE idseguimiento=@id AND orden=@orden
+                                ELSE
+                                    INSERT INTO TBLP_cedula_partidas (idseguimiento, orden, descripcion)
+                                    VALUES (@id, @orden, @desc)", conn);
+                            cmdUpsert.Parameters.AddWithValue("@id", req.IdSeguimiento);
+                            cmdUpsert.Parameters.AddWithValue("@orden", p.Orden);
+                            cmdUpsert.Parameters.AddWithValue("@desc", (object)p.Descripcion ?? DBNull.Value);
+                            cmdUpsert.ExecuteNonQuery();
                         }
+
+                        // 3. Eliminar partidas cuyo orden ya no existe en la lista nueva
+                        //    SOLO si no tienen fotos en ningún seguimiento (para no dejar fotos huérfanas)
+                        var cmdDelExtra = new SqlCommand(@"
+                            DELETE FROM TBLP_cedula_partidas
+                            WHERE idseguimiento = @id
+                              AND orden NOT IN (SELECT value FROM STRING_SPLIT(@ordenes, ','))
+                              AND idpartida NOT IN (SELECT DISTINCT idpartida FROM TBLP_cedula_partidas_fotos)",
+                            conn);
+                        cmdDelExtra.Parameters.AddWithValue("@id", req.IdSeguimiento);
+                        cmdDelExtra.Parameters.AddWithValue("@ordenes",
+                            string.Join(",", ordenesNuevos));
+                        cmdDelExtra.ExecuteNonQuery();
                     }
                 }
                 return Ok(new { success = true });

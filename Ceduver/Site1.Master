@@ -521,7 +521,7 @@
     
     <script src="assets/js/Obras.js?v=5"></script>
 
-    <script src="assets/js/Cedula.js?v=20"></script>
+    <script src="assets/js/Cedula.js?v=21"></script>
 
 	<script>
         document.addEventListener("DOMContentLoaded", function () {

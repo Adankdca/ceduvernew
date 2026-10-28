@@ -1427,6 +1427,13 @@ var CedulaModule = function () {
                     // — Sección C: marcar pendiente para cargar al abrir modal —
                     _pendienteCargarPartidas = { idAcciones: idAcciones, idSeg: df.idSeguimiento };
 
+                    // Mostrar modal AQUÍ, después de asignar _pendienteCargarPartidas
+                    $('#modalDatosFinales').one('shown.bs.modal', function () {
+                        cargarPartidasFotosFinal(_pendienteCargarPartidas.idAcciones, _pendienteCargarPartidas.idSeg);
+                        _pendienteCargarPartidas = null;
+                    });
+                    $('#modalDatosFinales').modal('show');
+
                 } else {
                     // ══ MODO AGREGAR: primera vez, pre-cargar del último seguimiento tipo S ══
                     $('#hddAccionMovFinal').val('A');
@@ -1452,19 +1459,17 @@ var CedulaModule = function () {
                             $('#txtCostoTotalFinal').val(parseFloat(seg.costoTotal || 0).toFixed(2));
                         }
                     });
-                    // Primera vez: marcar pendiente para cargar al abrir modal
+                    // Primera vez: abrir modal con idSeg=0 (solo muestra partidas sin fotos)
                     _pendienteCargarPartidas = { idAcciones: idAcciones, idSeg: 0 };
-                }
-            });
 
-            // ── 3. Mostrar modal; cargar partidas en shown.bs.modal (DOM listo) ──
-            $('#modalDatosFinales').one('shown.bs.modal', function () {
-                if (_pendienteCargarPartidas) {
-                    cargarPartidasFotosFinal(_pendienteCargarPartidas.idAcciones, _pendienteCargarPartidas.idSeg);
-                    _pendienteCargarPartidas = null;
+                    // Mostrar modal AQUÍ, después de asignar _pendienteCargarPartidas
+                    $('#modalDatosFinales').one('shown.bs.modal', function () {
+                        cargarPartidasFotosFinal(_pendienteCargarPartidas.idAcciones, _pendienteCargarPartidas.idSeg);
+                        _pendienteCargarPartidas = null;
+                    });
+                    $('#modalDatosFinales').modal('show');
                 }
             });
-            $('#modalDatosFinales').modal('show');
         });
     };
 
