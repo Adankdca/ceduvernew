@@ -917,13 +917,19 @@ CREATE TABLE TBLP_cedula_partidas_fotos (
     idfoto          BIGINT IDENTITY(1,1) PRIMARY KEY,
     idpartida       BIGINT NOT NULL,
     idseguimiento   BIGINT NOT NULL,
-    numero_foto     INT NOT NULL,          -- 1 o 2
+    numero_foto     INT NOT NULL,
     ruta_foto       NVARCHAR(500) NULL,
     descripcion     NVARCHAR(1000) NULL,
     latitud         NVARCHAR(50)  NULL,
     longitud        NVARCHAR(50)  NULL,
     fecha_registro  DATETIME DEFAULT GETDATE()
-)";
+);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name='UQ_cedula_partidas_fotos' AND object_id=OBJECT_ID('TBLP_cedula_partidas_fotos')
+)
+    ALTER TABLE TBLP_cedula_partidas_fotos
+    ADD CONSTRAINT UQ_cedula_partidas_fotos UNIQUE (idpartida, idseguimiento, numero_foto);";
                     new SqlCommand(ddl, conn).ExecuteNonQuery();
 
                     // Obtener el idseguimiento del INICIO para buscar las partidas
@@ -960,7 +966,9 @@ CREATE TABLE TBLP_cedula_partidas_fotos (
                         });
                     }
 
-                    // Traer partidas + fotos del seguimiento solicitado (LEFT JOIN)
+                    // Traer partidas + fotos del seguimiento solicitado
+                    // Usamos OUTER APPLY en lugar de LEFT JOIN para evitar filas duplicadas
+                    // cuando existan registros duplicados en TBLP_cedula_partidas_fotos
                     var sql = @"
 SELECT
     p.idpartida,
@@ -977,10 +985,18 @@ SELECT
     f2.latitud       AS latFoto2,
     f2.longitud      AS lonFoto2
 FROM TBLP_cedula_partidas p
-LEFT JOIN TBLP_cedula_partidas_fotos f1
-       ON f1.idpartida=p.idpartida AND f1.idseguimiento=@idSeg AND f1.numero_foto=1
-LEFT JOIN TBLP_cedula_partidas_fotos f2
-       ON f2.idpartida=p.idpartida AND f2.idseguimiento=@idSeg AND f2.numero_foto=2
+OUTER APPLY (
+    SELECT TOP 1 idfoto, ruta_foto, descripcion, latitud, longitud
+    FROM TBLP_cedula_partidas_fotos
+    WHERE idpartida=p.idpartida AND idseguimiento=@idSeg AND numero_foto=1
+    ORDER BY idfoto DESC
+) f1
+OUTER APPLY (
+    SELECT TOP 1 idfoto, ruta_foto, descripcion, latitud, longitud
+    FROM TBLP_cedula_partidas_fotos
+    WHERE idpartida=p.idpartida AND idseguimiento=@idSeg AND numero_foto=2
+    ORDER BY idfoto DESC
+) f2
 WHERE p.idseguimiento=@idSegInicio
 ORDER BY p.orden";
 
@@ -1054,7 +1070,7 @@ ORDER BY p.orden";
                 {
                     conn.Open();
 
-                    // Asegurarse que la tabla existe
+                    // Asegurarse que la tabla existe y tiene constraint único
                     const string ddl = @"
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='TBLP_cedula_partidas_fotos')
 CREATE TABLE TBLP_cedula_partidas_fotos (
@@ -1067,7 +1083,13 @@ CREATE TABLE TBLP_cedula_partidas_fotos (
     latitud         NVARCHAR(50)  NULL,
     longitud        NVARCHAR(50)  NULL,
     fecha_registro  DATETIME DEFAULT GETDATE()
-)";
+);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name='UQ_cedula_partidas_fotos' AND object_id=OBJECT_ID('TBLP_cedula_partidas_fotos')
+)
+    ALTER TABLE TBLP_cedula_partidas_fotos
+    ADD CONSTRAINT UQ_cedula_partidas_fotos UNIQUE (idpartida, idseguimiento, numero_foto);";
                     new SqlCommand(ddl, conn).ExecuteNonQuery();
 
                     var uploadsRoot = uploadsRootPre; // carpeta ya creada arriba
@@ -1113,8 +1135,9 @@ CREATE TABLE TBLP_cedula_partidas_fotos (
                             }
 
                             // ¿Ya existe registro para esta partida+seguimiento+nFoto?
+                            // TOP 1 por si acaso existen duplicados previos (el constraint los evitará en adelante)
                             var cmdExiste = new SqlCommand(
-                                "SELECT idfoto, ruta_foto FROM TBLP_cedula_partidas_fotos WHERE idpartida=@p AND idseguimiento=@s AND numero_foto=@n",
+                                "SELECT TOP 1 idfoto, ruta_foto FROM TBLP_cedula_partidas_fotos WHERE idpartida=@p AND idseguimiento=@s AND numero_foto=@n ORDER BY idfoto DESC",
                                 conn);
                             cmdExiste.Parameters.AddWithValue("@p", idPartida);
                             cmdExiste.Parameters.AddWithValue("@s", idSeguimiento);
@@ -1740,7 +1763,7 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
             }
         }
 
-        [HttpDelete]
+        [HttpPost]
         [Route("EliminarSeguimiento/{idSeguimiento}")]
         public IHttpActionResult EliminarSeguimiento(long idSeguimiento)
         {
@@ -3371,18 +3394,21 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                 Func<string, string> toUrl = (ruta) =>
                 {
                     if (string.IsNullOrEmpty(ruta)) return "";
-                    // Si ya es URL absoluta, regrésala tal cual
                     if (ruta.StartsWith("http")) return ruta;
-                    // Si es ruta relativa tipo "Uploads/Seguimiento/archivo.jpg"
-                    return baseUrl + ruta.Replace("\\", "/").TrimStart('/');
+                    // Quitar ~/ y construir URL correcta incluyendo ApplicationPath
+                    var r = ruta.Replace("\\", "/");
+                    if (r.StartsWith("~/")) r = r.Substring(2);
+                    r = r.TrimStart('/');
+                    return baseUrl + r;
                 };
 
                 // ── 4. Helper para tarjeta de foto (solo si hay ruta Y archivo existe físicamente) ──
                 Func<string, string, string, string, string> fotoCard = (titulo, ruta, lat, lon) =>
                 {
                     if (string.IsNullOrEmpty(ruta)) return "";
-                    // Verificar que el archivo realmente existe en disco
-                    string physPath = HttpContext.Current.Server.MapPath("~/" + ruta.TrimStart('/').Replace("/", "\\"));
+                    var rutaLimpia = ruta.Replace("\\", "/");
+                    if (rutaLimpia.StartsWith("~/")) rutaLimpia = rutaLimpia.Substring(2);
+                    string physPath = HttpContext.Current.Server.MapPath("~/" + rutaLimpia.TrimStart('/').Replace("/", "\\"));
                     if (!System.IO.File.Exists(physPath)) return "";
                     string url = toUrl(ruta);
                     string coords = (!string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
@@ -3784,13 +3810,18 @@ VALUES (@p, @s, @n, @r, @d, @lat, @lon)", conn);
                 {
                     if (string.IsNullOrEmpty(ruta)) return "";
                     if (ruta.StartsWith("http")) return ruta;
-                    return baseUrl + ruta.Replace("\\", "/").TrimStart('/');
+                    var r = ruta.Replace("\\", "/");
+                    if (r.StartsWith("~/")) r = r.Substring(2);
+                    r = r.TrimStart('/');
+                    return baseUrl + r;
                 };
 
                 Func<string, string, string, string, string> fotoCard = (titulo, ruta, lat, lon) =>
                 {
                     if (string.IsNullOrEmpty(ruta)) return "";
-                    string phys = HttpContext.Current.Server.MapPath("~/" + ruta.TrimStart('/').Replace("/", "\\"));
+                    var rutaLimpia = ruta.Replace("\\", "/");
+                    if (rutaLimpia.StartsWith("~/")) rutaLimpia = rutaLimpia.Substring(2);
+                    string phys = HttpContext.Current.Server.MapPath("~/" + rutaLimpia.TrimStart('/').Replace("/", "\\"));
                     if (!System.IO.File.Exists(phys)) return "";
                     string url   = toUrl(ruta);
                     string coords = (!string.IsNullOrEmpty(lat) || !string.IsNullOrEmpty(lon))
@@ -4312,12 +4343,13 @@ namespace Ceduver.Controllers
                     string fechaGen  = DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-MX"));
                     string nombreObra = (accion.nombreObra + " " + accion.accion).Trim();
 
-                    // Helper para convertir ruta ~/Uploads/... → URL web /Uploads/...
+                    // Helper: ~/Uploads/... → URL correcta incluyendo ApplicationPath (/Ceduver en IIS)
+                    string appPath4 = HttpContext.Current.Request.ApplicationPath.TrimEnd('/');
                     Func<string,string> toUrl = (ruta) => {
-                        var u = (ruta ?? "").Trim();
+                        var u = (ruta ?? "").Trim().Replace("\\", "/");
                         if (u.StartsWith("~/")) u = u.Substring(2);
-                        if (u.Length > 0 && u[0] != '/') u = "/" + u;
-                        return u;
+                        u = u.TrimStart('/');
+                        return u.Length > 0 ? appPath4 + "/" + u : "";
                     };
 
                     var sb = new StringBuilder();
@@ -4801,11 +4833,13 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222;
                     string monto     = ((decimal)contrato.monto).ToString("C2", new System.Globalization.CultureInfo("es-MX"));
                     string fechaGen  = DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-MX"));
                     string nombreObra = (accion.nombreObra + " " + accion.accion).Trim();
+                    // Helper: ~/Uploads/... → URL correcta incluyendo ApplicationPath (/Ceduver en IIS)
+                    string appPath5 = HttpContext.Current.Request.ApplicationPath.TrimEnd('/');
                     Func<string,string> toUrl = (ruta) => {
-                        var u = (ruta ?? "").Trim();
+                        var u = (ruta ?? "").Trim().Replace("\\", "/");
                         if (u.StartsWith("~/")) u = u.Substring(2);
-                        if (u.Length > 0 && u[0] != '/') u = "/" + u;
-                        return u;
+                        u = u.TrimStart('/');
+                        return u.Length > 0 ? appPath5 + "/" + u : "";
                     };
 
                     var sb = new StringBuilder();

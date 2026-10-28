@@ -4,6 +4,25 @@ var CedulaModule = function () {
     //var datatable;
     var datatableSeguimiento;
     var baseUrl = 'api/Cedula/';
+    // Prefijo de la aplicación web (ej: "/Ceduver" en IIS, "" en raíz)
+    // Se calcula una vez a partir de la URL actual para que funcione
+    // en localhost Y en el servidor sin tocar el código.
+    var _appPath = (function () {
+        // window.location.pathname para "http://server/Ceduver/Cedula.aspx"
+        // es "/Ceduver/Cedula.aspx". Quitamos el último segmento (el .aspx)
+        // y nos queda "/Ceduver".
+        var p = window.location.pathname;
+        var idx = p.lastIndexOf('/');
+        return idx > 0 ? p.substring(0, idx) : '';
+    })();
+    // Convierte "~/Uploads/..." o "Uploads/..." a una URL absoluta de la app
+    function rutaAUrl(ruta) {
+        var r = (ruta || '').trim();
+        if (!r) return '';
+        r = r.replace(/^~\//, '');   // quitar ~/
+        r = r.replace(/^\//, '');    // quitar / inicial si quedó
+        return _appPath + '/' + r;
+    }
     var currentIdAcciones = 0;
     var currentIdObra = 0;
     var currentContrato = '';
@@ -1289,7 +1308,7 @@ var CedulaModule = function () {
             if (result.value) {
                 $.ajax({
                     url: baseUrl + 'EliminarSeguimiento/' + idSeguimiento,
-                    type: 'DELETE',
+                    type: 'POST',
                     success: function () {
                         Swal.fire({
                             title: 'Eliminado',
@@ -2443,8 +2462,7 @@ var CedulaModule = function () {
                 // Convertir ruta ~/Uploads/... a /Uploads/... para el browser
                 // La ruta guardada es "~/Uploads/Partidas/archivo.jpg"
                 // El browser necesita "/Uploads/Partidas/archivo.jpg"
-                var rutaWeb = (fData.ruta || '').replace(/^~\//, '').replace(/^\//,'');
-                if (rutaWeb) rutaWeb = '/' + rutaWeb;
+                var rutaWeb = rutaAUrl(fData.ruta);
                 html += '<div class="col-md-6 mb-3">'
                     + '<div class="card border shadow-sm h-100">'
                     + '<div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">'
@@ -2509,9 +2527,7 @@ var CedulaModule = function () {
         $('#listaPartidasFotosSeg').on('click', '.btn-descargar-foto-partida', function () {
             var ruta = $(this).data('ruta');
             if (!ruta) { Swal.fire('Aviso', 'No hay foto guardada.', 'info'); return; }
-            // Convertir ~/Uploads/... a /Uploads/...
-            var rutaWeb = (ruta + '').replace(/^~\//, '').replace(/^\//, '');
-            if (rutaWeb) rutaWeb = '/' + rutaWeb;
+            var rutaWeb = rutaAUrl(ruta);
             var nombreArchivo = rutaWeb.split('/').pop() || 'foto.jpg';
             var link = document.createElement('a');
             link.href = rutaWeb;
@@ -2721,8 +2737,7 @@ var CedulaModule = function () {
                 var fKey = 'foto' + nf;
                 var fData = p[fKey] || {};
                 var tieneRuta = !!fData.ruta;
-                var rutaWeb = (fData.ruta || '').replace(/^~\//, '').replace(/^\//,'');
-                if (rutaWeb) rutaWeb = '/' + rutaWeb;
+                var rutaWeb = rutaAUrl(fData.ruta);
                 html += '<div class="col-md-6 mb-3">'
                     + '<div class="card border shadow-sm h-100">'
                     + '<div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">'
