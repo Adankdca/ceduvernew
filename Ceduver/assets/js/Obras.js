@@ -141,6 +141,37 @@ const ObrasModule = (function () {
     // BÚSQUEDA / GRID
     // ══════════════════════════════════════════════════════
 
+    // var buscar = function () {
+    //     var filtros = {
+    //         rubro: $('#filterRubro').val() || '',
+    //         anio: $('#filterAnio').val() || '',
+    //         nombre: $('#filterNombre').val() || '',
+    //         contrato: $('#filterContrato').val() || '',
+    //         numObra: $('#filterNumObra').val() || ''
+    //     };
+    //     // Destruir DataTable antes de cargar nuevos datos
+    //     if (dataTable) { dataTable.destroy(); dataTable = null; }
+
+    //     var $tbody = $('#tbodyObras');
+    //     $tbody.html(
+    //         '<tr><td colspan="12" class="text-center py-5">' +
+    //         '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i>' +
+    //         '<div class="mt-2 text-muted">Cargando obras...</div></td></tr>'
+    //     );
+    //     $('#rowTotales').hide();
+
+    //     $.get(API + 'getObras', filtros)
+    //         .done(function (data) { renderizar(data); })
+    //         .fail(function (xhr) {
+    //             $tbody.html(
+    //                 '<tr><td colspan="12" class="text-center text-danger py-5">' +
+    //                 '<i class="fas fa-exclamation-circle fa-2x mb-2 d-block"></i>' +
+    //                 'Error al conectar con el servidor: ' +
+    //                 (xhr.responseText || xhr.statusText) + '</td></tr>'
+    //             );
+    //         });
+    // };
+
     var buscar = function () {
         var filtros = {
             rubro: $('#filterRubro').val() || '',
@@ -149,7 +180,7 @@ const ObrasModule = (function () {
             contrato: $('#filterContrato').val() || '',
             numObra: $('#filterNumObra').val() || ''
         };
-        // Destruir DataTable antes de cargar nuevos datos
+
         if (dataTable) { dataTable.destroy(); dataTable = null; }
 
         var $tbody = $('#tbodyObras');
@@ -160,16 +191,25 @@ const ObrasModule = (function () {
         );
         $('#rowTotales').hide();
 
-        $.get(API + 'getObras', filtros)
-            .done(function (data) { renderizar(data); })
-            .fail(function (xhr) {
+        // ── CAMBIO CLAVE: $.ajax con timeout de 2 minutos ──
+        $.ajax({
+            url: API + 'getObras',
+            type: 'GET',
+            data: filtros,
+            timeout: 120000,   // 120 segundos = 2 minutos
+            success: function (data) { renderizar(data); },
+            error: function (xhr, status) {
+                var msg = status === 'timeout'
+                    ? 'La consulta tardó demasiado. Intente filtrar por año o rubro para reducir resultados.'
+                    : 'Error al conectar con el servidor: ' + (xhr.responseText || xhr.statusText);
+
                 $tbody.html(
                     '<tr><td colspan="12" class="text-center text-danger py-5">' +
                     '<i class="fas fa-exclamation-circle fa-2x mb-2 d-block"></i>' +
-                    'Error al conectar con el servidor: ' +
-                    (xhr.responseText || xhr.statusText) + '</td></tr>'
+                    msg + '</td></tr>'
                 );
-            });
+            }
+        });
     };
 
     var renderizar = function (data) {

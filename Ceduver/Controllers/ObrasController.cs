@@ -26,213 +26,156 @@ namespace Ceduver.Controllers
         [HttpGet]
         [Route("getObras")]
         public IHttpActionResult GetObras(
-            string rubro = "",
-            string anio = "",
-            string contrato = "",
-            string nombre = "",
-            string numObra = "")
-        {
-            try
-            {
-                using (var con = new SqlConnection(_connectionString))
+             string rubro = "",
+             string anio = "",
+             string contrato = "",
+             string nombre = "",
+             string numObra = "")
                 {
-                    // ── NOTA IMPORTANTE ──────────────────────────────────────
-                    // VS2005 usaba INNER JOIN obligatorio con TblD_Acciones y
-                    // TBLD_Contrato, lo que excluía obras sin contrato al filtrar
-                    // por contrato. Aquí usamos LEFT JOIN siempre y filtramos
-                    // sólo cuando el parámetro llega con valor.
-                    // El filtro por AÑO usa dbo.Añoinversion() igual que VS2005.
-                    // ─────────────────────────────────────────────────────────
-
-                    //string sql = @"
-                    //SELECT DISTINCT
-                    //    O.IDobraproyecto                                            AS idobra,
-                    //    O.OP_Num_obra                                               AS noObra,
-                    //    O.OP_NombreObra                                             AS nombre,
-                    //    S.PRO_Nombre                                                AS subrubro,
-                    //    ISNULL(TRY_CAST(dbo.Añoinversion(O.IDobraproyecto, 'm') AS DECIMAL(18,2)),0) AS municipal,
-                    //    ISNULL(TRY_CAST(dbo.Añoinversion(O.IDobraproyecto, 'e') AS DECIMAL(18,2)),0) AS estatal,
-                    //    ISNULL(TRY_CAST(dbo.Añoinversion(O.IDobraproyecto, 'f') AS DECIMAL(18,2)),0) AS federal,
-                    //    ISNULL(TRY_CAST(dbo.Añoinversion(O.IDobraproyecto, 't') AS DECIMAL(18,2)),0) AS total,
-                    //    dbo.FinanciamientoObraproyecto(O.IDobraproyecto, 0)        AS finanto,
-                    //    dbo.localidadObraproyecto(O.IDobraproyecto)                AS localidad,
-                    //    dbo.ConteoAcciones(O.IDobraproyecto)                       AS numAcciones
-                    //FROM TBLP_Obraproyecto O
-                    //LEFT  JOIN TblD_Acciones  A ON O.IDobraproyecto = A.IDobraproyecto
-                    //LEFT  JOIN TBLD_Contrato  C ON A.IDContrato  = C.IDContrato
-                    //INNER JOIN TBLC_Subrubro  S ON O.IDPrograma  = S.IDPrograma
-
-                    //WHERE O.OP_Eliminado = 0
-
-                    //-- FILTRO RUBRO
-                    //AND (@rubro IS NULL OR @rubro = '' OR O.IDRubro = @rubro)
-
-                    //-- 🔥 FILTRO AÑO (CORREGIDO)
-                    //AND (@anio IS NULL OR @anio = '' OR EXISTS (
-                    //    SELECT 1
-                    //    FROM TBLD_añoobraproyecto ap
-                    //    WHERE ap.IDObraproyecto = O.IDobraproyecto
-                    //        AND ap.OP_Año = @anio
-                    //))
-
-                    //-- FILTRO CONTRATO
-                    //AND (@contrato IS NULL OR @contrato = '' OR 
-                    //        (C.CON_Contrato IS NOT NULL AND C.CON_Contrato LIKE '%' + @contrato + '%'))
-
-                    //-- FILTRO NOMBRE
-                    //AND (@nombre IS NULL OR @nombre = '' OR 
-                    //        O.OP_NombreObra LIKE '%' + @nombre + '%')
-
-                    //-- FILTRO NUM OBRA
-                    //AND (@numObra IS NULL OR @numObra = '' OR 
-                    //        O.OP_Num_obra LIKE '%' + @numObra + '%')
-
-                    //ORDER BY O.IDobraproyecto DESC;";
-
-                    //string sql = @"SELECT
-                    //                o.IDobraproyecto,
-                    //                o.OP_Num_obra,
-                    //                o.OP_NombreObra,
-
-                    //                r.Rub_Nombre AS rubro,
-                    //                s.PRO_Nombre AS subrubro,
-
-                    //                ISNULL(SUM(a.OP_InversioMunicipal),0) AS municipal,
-                    //                ISNULL(SUM(a.OP_InversionEstatal),0) AS estatal,
-                    //                ISNULL(SUM(a.OP_InversionFederal),0) AS federal,
-
-                    //                ISNULL(
-                    //                    SUM(
-                    //                        ISNULL(a.OP_InversioMunicipal,0) +
-                    //                        ISNULL(a.OP_InversionEstatal,0) +
-                    //                        ISNULL(a.OP_InversionFederal,0)
-                    //                    ),0
-                    //                ) AS total
-
-                    //            FROM TBLP_Obraproyecto o
-
-                    //            LEFT JOIN TBLC_Rubros r
-                    //                ON r.IDRubro = o.IDRubro
-
-                    //            LEFT JOIN TBLC_Subrubro s
-                    //                ON s.IDPrograma = o.IDPrograma
-
-                    //            LEFT JOIN TBLD_añoobraproyecto a
-                    //                ON a.IDObraproyecto = o.IDobraproyecto
-
-                    //            GROUP BY
-                    //                o.IDobraproyecto,
-                    //                o.OP_Num_obra,
-                    //                o.OP_NombreObra,
-                    //                r.Rub_Nombre,
-                    //                s.PRO_Nombre;";
-                    con.Open();
-                    string sql = @"
-
+                    try
+                    {
+                        // ── MEJORAS DE RENDIMIENTO ─────────────────────────────────
+                        // Las 3 UDFs escalares originales usaban CURSORs internos,
+                        // lo que significa que por cada obra se abría y recorría un
+                        // cursor de SQL Server. Con 161 obras = 483 cursores.
+                        // Se reemplazan por CTEs equivalentes verificados con las
+                        // tablas/vistas reales de la base de datos:
+                        //
+                        //  dbo.ConteoAcciones          → CTE_Acciones (COUNT en TblD_Acciones)
+                        //  dbo.localidadObraproyecto   → CTE_Localidades (TblD_Localidadproyectoobra + TBLC_Localidades)
+                        //  dbo.FinanciamientoObraproyecto → CTE_Financiamiento (VW_Financiamientoinv → PRF_Nombre)
+                        //
+                        // CommandTimeout = 120 seg evita el error de conexión/timeout.
+                        // ─────────────────────────────────────────────────────────
+                        const string sql = @"
+                            WITH
+                            -- Años concatenados por obra (todas las obras, con o sin años)
+                            CTE_Anios AS (
                                 SELECT
-                                    O.IDobraproyecto                              AS idobra,
-                                    O.OP_Num_obra                                 AS noObra,
-                                    O.OP_NombreObra                               AS nombre,
-                                    S.PRO_Nombre                                  AS subrubro,
-                                    ISNULL((
-                                    SELECT STUFF((
-                                        SELECT ', ' + CAST(AP2.OP_Año AS nvarchar(10))
-                                        FROM TBLD_añoobraproyecto AP2
-                                        WHERE AP2.IDObraproyecto = O.IDobraproyecto
-                                        FOR XML PATH('')
-                                    ), 1, 2, '')
-                                   ), '')                                            AS anio,
+                                    O2.IDobraproyecto,
+                                    STUFF((
+                                        SELECT ', ' + CAST(ap2.OP_Año AS nvarchar(10))
+                                        FROM TBLD_añoobraproyecto ap2
+                                        WHERE ap2.IDObraproyecto = O2.IDobraproyecto
+                                        FOR XML PATH(''), TYPE
+                                    ).value('.','nvarchar(max)'), 1, 2, '') AS anio
+                                FROM TBLP_Obraproyecto O2
+                                WHERE ISNULL(O2.OP_Eliminado, 0) = 0
+                            ),
+                            -- Inversión totales por obra
+                            CTE_Inversion AS (
+                                SELECT
+                                    IDObraproyecto,
+                                    ISNULL(SUM(OP_InversioMunicipal), 0) AS municipal,
+                                    ISNULL(SUM(OP_InversionEstatal),  0) AS estatal,
+                                    ISNULL(SUM(OP_InversionFederal),  0) AS federal,
+                                    ISNULL(SUM(
+                                        ISNULL(OP_InversioMunicipal,0) +
+                                        ISNULL(OP_InversionEstatal,0)  +
+                                        ISNULL(OP_InversionFederal,0)
+                                    ), 0) AS total
+                                FROM TBLD_añoobraproyecto
+                                GROUP BY IDObraproyecto
+                            ),
+                            -- Localidades por obra
+                            -- Tablas verificadas: TblD_Localidadproyectoobra + TBLC_Localidades
+                            -- (igual que dbo.localidadObraproyecto)
+                            CTE_Localidades AS (
+                                SELECT
+                                    e.IDObraproyecto,
+                                    STUFF((
+                                        SELECT ', ' + f2.LCL_Nombre
+                                        FROM TblD_Localidadproyectoobra e2
+                                        JOIN TBLC_Localidades f2 ON e2.IDLocalidad = f2.IDLocalidad
+                                        WHERE e2.IDObraproyecto = e.IDObraproyecto
+                                        FOR XML PATH(''), TYPE
+                                    ).value('.','nvarchar(max)'), 1, 2, '') AS localidad
+                                FROM TblD_Localidadproyectoobra e
+                                GROUP BY e.IDObraproyecto
+                            ),
+                            -- Fuente de financiamiento por obra
+                            -- Usa VW_Financiamientoinv.PRF_Nombre (de TblC_FuenteFinanciamiento)
+                            -- igual que dbo.FinanciamientoObraproyecto con @Año = 0
+                            CTE_Financiamiento AS (
+                                SELECT
+                                    v.IDObraproyecto,
+                                    STUFF((
+                                        SELECT DISTINCT ', ' + v2.PRF_Nombre
+                                        FROM VW_Financiamientoinv v2
+                                        WHERE v2.IDObraproyecto = v.IDObraproyecto
+                                        FOR XML PATH(''), TYPE
+                                    ).value('.','nvarchar(max)'), 1, 2, '') AS finanto
+                                FROM VW_Financiamientoinv v
+                                GROUP BY v.IDObraproyecto
+                            ),
+                            -- Conteo de acciones por obra
+                            -- Mismo COUNT que dbo.ConteoAcciones
+                            CTE_Acciones AS (
+                                SELECT IDobraproyecto, COUNT(IDAcciones) AS numAcciones
+                                FROM TblD_Acciones
+                                GROUP BY IDobraproyecto
+                            ),
+                            -- Contratos para el filtro @contrato
+                            CTE_Contrato AS (
+                                SELECT DISTINCT A.IDobraproyecto, C.CON_Contrato
+                                FROM TblD_Acciones A
+                                JOIN TBLD_Contrato C ON A.IDContrato = C.IDContrato
+                            )
+                            SELECT DISTINCT
+                                O.IDobraproyecto                    AS idobra,
+                                O.OP_Num_obra                       AS noObra,
+                                O.OP_NombreObra                     AS nombre,
+                                S.PRO_Nombre                        AS subrubro,
+                                ISNULL(CA.anio,        '')          AS anio,
+                                ISNULL(INV.municipal,  0)           AS municipal,
+                                ISNULL(INV.estatal,    0)           AS estatal,
+                                ISNULL(INV.federal,    0)           AS federal,
+                                ISNULL(INV.total,      0)           AS total,
+                                ISNULL(FIN.finanto,    '')          AS finanto,
+                                ISNULL(LOC.localidad,  '')          AS localidad,
+                                ISNULL(ACC.numAcciones, 0)          AS numAcciones
+                            FROM TBLP_Obraproyecto O
+                            INNER JOIN TBLC_Subrubro       S   ON O.IDPrograma     = S.IDPrograma
+                            LEFT  JOIN CTE_Anios           CA  ON O.IDobraproyecto = CA.IDObraproyecto
+                            LEFT  JOIN CTE_Inversion       INV ON O.IDobraproyecto = INV.IDObraproyecto
+                            LEFT  JOIN CTE_Localidades     LOC ON O.IDobraproyecto = LOC.IDObraproyecto
+                            LEFT  JOIN CTE_Financiamiento  FIN ON O.IDobraproyecto = FIN.IDObraproyecto
+                            LEFT  JOIN CTE_Acciones        ACC ON O.IDobraproyecto = ACC.IDobraproyecto
+                            LEFT  JOIN CTE_Contrato        CT  ON O.IDobraproyecto = CT.IDobraproyecto
+                            WHERE ISNULL(O.OP_Eliminado, 0) = 0
+                              AND (@rubro    = '' OR O.IDRubro   = @rubro)
+                              AND (@anio     = '' OR CA.anio LIKE '%' + @anio + '%')
+                              AND (@contrato = '' OR CT.CON_Contrato LIKE '%' + @contrato + '%')
+                              AND (@nombre   = '' OR O.OP_NombreObra  LIKE '%' + @nombre   + '%')
+                              AND (@numObra  = '' OR O.OP_Num_obra    LIKE '%' + @numObra  + '%')
+                            ORDER BY O.IDobraproyecto DESC
+                            OPTION (RECOMPILE);";
 
-                                    ISNULL(SUM(AINV.OP_InversioMunicipal),0)      AS municipal,
-                                    ISNULL(SUM(AINV.OP_InversionEstatal),0)       AS estatal,
-                                    ISNULL(SUM(AINV.OP_InversionFederal),0)       AS federal,
+                        // Convertir null a "" para que los filtros SQL funcionen correctamente
+                        // (en SQL Server: NULL = '' devuelve NULL, no TRUE → filtra todo)
+                        rubro = rubro ?? "";
+                        anio = anio ?? "";
+                        contrato = contrato ?? "";
+                        nombre = nombre ?? "";
+                        numObra = numObra ?? "";
 
-                                    ISNULL(
-                                        SUM(
-                                            ISNULL(AINV.OP_InversioMunicipal,0) +
-                                            ISNULL(AINV.OP_InversionEstatal,0) +
-                                            ISNULL(AINV.OP_InversionFederal,0)
-                                        ),0
-                                    )                                             AS total,
+                        using (var con = new SqlConnection(_connectionString))
+                        {
+                            con.Open();
+                            var lista = con.Query<ObraDTO>(
+                                sql,
+                                new { rubro, anio, contrato, nombre, numObra },
+                                commandTimeout: 120
+                            ).ToList();
 
-                                    dbo.FinanciamientoObraproyecto(O.IDobraproyecto, 0) AS finanto,
-                                    dbo.localidadObraproyecto(O.IDobraproyecto)         AS localidad,
-                                    dbo.ConteoAcciones(O.IDobraproyecto)                AS numAcciones
-
-                                FROM TBLP_Obraproyecto O
-
-                                LEFT JOIN TblD_Acciones AC
-                                    ON O.IDobraproyecto = AC.IDobraproyecto
-
-                                LEFT JOIN TBLD_Contrato C
-                                    ON AC.IDContrato = C.IDContrato
-
-                                INNER JOIN TBLC_Subrubro S
-                                    ON O.IDPrograma = S.IDPrograma
-
-                                LEFT JOIN TBLD_añoobraproyecto AINV
-                                    ON O.IDobraproyecto = AINV.IDObraproyecto
-
-                                WHERE ISNULL(O.OP_Eliminado,0) = 0
-
-                                -- FILTRO RUBRO
-                                AND (@rubro IS NULL OR @rubro = '' OR O.IDRubro = @rubro)
-
-                                -- FILTRO AÑO
-                                AND (
-                                    @anio IS NULL
-                                    OR @anio = ''
-                                    OR EXISTS (
-                                        SELECT 1
-                                        FROM TBLD_añoobraproyecto AP
-                                        WHERE AP.IDObraproyecto = O.IDobraproyecto
-                                        AND AP.OP_Año = @anio
-                                    )
-                                )
-
-                                -- FILTRO CONTRATO
-                                AND (
-                                    @contrato IS NULL
-                                    OR @contrato = ''
-                                    OR (
-                                        C.CON_Contrato IS NOT NULL
-                                        AND C.CON_Contrato LIKE '%' + @contrato + '%'
-                                    )
-                                )
-
-                                -- FILTRO NOMBRE
-                                AND (
-                                    @nombre IS NULL
-                                    OR @nombre = ''
-                                    OR O.OP_NombreObra LIKE '%' + @nombre + '%'
-                                )
-
-                                -- FILTRO NUM OBRA
-                                AND (
-                                    @numObra IS NULL
-                                    OR @numObra = ''
-                                    OR O.OP_Num_obra LIKE '%' + @numObra + '%'
-                                )
-
-                                GROUP BY
-                                    O.IDobraproyecto,
-                                    O.OP_Num_obra,
-                                    O.OP_NombreObra,
-                                    S.PRO_Nombre
-
-                                ORDER BY O.IDobraproyecto DESC";
-
-                    var lista = con.Query<ObraDTO>(sql,
-                        new { rubro, anio, contrato, nombre, numObra }).ToList();
-
-                    return Ok(lista);
+                            return Ok(lista);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return InternalServerError(ex);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-        }
 
         [HttpPost]
         [Route("guardarObra")]
